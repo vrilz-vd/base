@@ -20654,13 +20654,20 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
     
         if WindowInfo.Icon then
             if WindowInfo.Icon == "vhpetir" then
-                -- VH Lightning logo vector
-                WindowIcon = MakeVHLogo(TitleHolder, WindowInfo.IconSize, {
-                    Color = Color3.fromRGB(255, 40, 40),
-                    Pulse = true,
-                })
-                Library:AddIconHover(WindowIcon, WindowIcon, { Scale = 1.12, Tilt = -8 })
-            else
+    local holder, label = MakeVHLogo(MiniCard, UDim2.fromOffset(26, 26), {
+        Color = Color3.fromRGB(255, 40, 40),
+        Pulse = true,
+        BgTransparency = 0.05,  -- background lebih pekat biar kontras
+    })
+    holder.AnchorPoint = Vector2.new(0, 0.5)
+    holder.Position = UDim2.new(0, 12, 0, 24)
+    MiniIcon = holder
+    -- Pastikan label VH selalu kelihatan di atas petir
+    if label then
+        label.ZIndex = 10
+        label.TextStrokeTransparency = 0.2
+    end
+else
                 local Icon = Library:GetCustomIcon(WindowInfo.Icon)
                 WindowIcon = New("ImageLabel", {
                     Size = WindowInfo.IconSize,
@@ -31249,116 +31256,141 @@ end
         getgenv().Library = nil
     end
 
-    -- ===== VH Lightning Logo (vector, no PNG) =====
-    local function MakeVHLogo(parent, size, opts)
-        opts = opts or {}
-        size = size or UDim2.fromOffset(28, 28)
-        local color = opts.Color or Color3.fromRGB(255, 40, 40)
-        local textColor = opts.TextColor or Color3.fromRGB(255, 255, 255)
+-- ===== VH Lightning Logo (vector, no PNG) =====
+local function MakeVHLogo(parent, size, opts)
+    opts = opts or {}
+    size = size or UDim2.fromOffset(28, 28)
+    local color = opts.Color or Color3.fromRGB(255, 40, 40)
+    local textColor = opts.TextColor or Color3.fromRGB(255, 255, 255)
+    local baseSize = size.X.Offset or 28
 
-        local Holder = New("Frame", {
-            BackgroundTransparency = 1,
-            Size = size,
-            Parent = parent,
+    local Holder = New("Frame", {
+        BackgroundTransparency = 1,
+        Size = size,
+        Parent = parent,
+    })
+
+    local Bg = New("Frame", {
+        BackgroundColor3 = Color3.fromRGB(20, 8, 8),
+        BackgroundTransparency = opts.BgTransparency or 0.15,
+        Size = UDim2.fromScale(1, 1),
+        ZIndex = 1,
+        Parent = Holder,
+    })
+    New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = Bg })
+    New("UIStroke", {
+        Color = color,
+        Thickness = math.clamp(baseSize / 20, 1, 2),
+        Transparency = 0.35,
+        Parent = Bg,
+    })
+
+    local Bolt = New("Frame", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromScale(0.7, 0.8),
+        ZIndex = 2,
+        Parent = Holder,
+    })
+
+    local function Shard(sx, sy, rot, lenFrac, thFrac)
+        local len = math.max(baseSize * lenFrac, 2)
+        local th = math.max(baseSize * thFrac, 1)
+        local s = New("Frame", {
+            AnchorPoint = Vector2.new(0, 0.5),
+            BackgroundColor3 = color,
+            BorderSizePixel = 0,
+            Position = UDim2.fromScale(sx, sy),
+            Rotation = rot,
+            Size = UDim2.new(0, len, 0, th),
+            ZIndex = 2,
+            Parent = Bolt,
         })
+        New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = s })
+        return s
+    end
 
-        local Bg = New("Frame", {
-            BackgroundColor3 = Color3.fromRGB(20, 8, 8),
-            BackgroundTransparency = opts.BgTransparency or 0.15,
-            Size = UDim2.fromScale(1, 1),
-            Parent = Holder,
-        })
-        New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = Bg })
-        New("UIStroke", {
-            Color = color,
-            Thickness = 1.5,
-            Transparency = 0.35,
-            Parent = Bg,
-        })
+    local shards = {
+        Shard(0.18, 0.05, 28, 0.50, 0.14),
+        Shard(0.30, 0.28, 62, 0.43, 0.14),
+        Shard(0.42, 0.42, 12, 0.57, 0.14),
+        Shard(0.30, 0.62, 70, 0.43, 0.14),
+        Shard(0.18, 0.82, 32, 0.50, 0.14),
+    }
 
-        local Bolt = New("Frame", {
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            BackgroundTransparency = 1,
-            Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromScale(0.7, 0.8),
-            Parent = Holder,
-        })
+    local Label = New("TextLabel", {
+        BackgroundTransparency = 1,
+        FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
+        Size = UDim2.fromScale(1, 1),
+        Text = "VH",
+        TextColor3 = textColor,
+        TextSize = 0,
+        TextScaled = true,
+        TextStrokeTransparency = 0,
+        TextStrokeColor3 = Color3.fromRGB(80, 0, 0),
+        ZIndex = 10,
+        Parent = Holder,
+    })
+    New("UITextSizeConstraint", {
+        MaxTextSize = math.floor(baseSize * 1.4),
+        MinTextSize = math.max(math.floor(baseSize * 0.28), 4),
+        Parent = Label,
+    })
 
-        local function Shard(sx, sy, rot, len, th)
-            local s = New("Frame", {
-                AnchorPoint = Vector2.new(0, 0.5),
-                BackgroundColor3 = color,
-                BorderSizePixel = 0,
-                Position = UDim2.fromScale(sx, sy),
-                Rotation = rot,
-                Size = UDim2.new(0, len, 0, th),
-                Parent = Bolt,
-            })
-            New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = s })
-            return s
-        end
+    if opts.Pulse ~= false and Library.IconAnimations ~= false then
+        task.spawn(function()
+            while Holder.Parent and not Library.Unloaded do
+                TweenService:Create(Bg, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                    BackgroundColor3 = Color3.fromRGB(40, 6, 6),
+                }):Play()
+                task.wait(0.9)
+                if not Holder.Parent then break end
+                TweenService:Create(Bg, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                    BackgroundColor3 = Color3.fromRGB(20, 8, 8),
+                }):Play()
+                task.wait(0.9)
+            end
+        end)
+    end
 
-        Shard(0.18, 0.05, 28, 14, 4)
-        Shard(0.30, 0.28, 62, 12, 4)
-        Shard(0.42, 0.42, 12, 16, 4)
-        Shard(0.30, 0.62, 70, 12, 4)
-        Shard(0.18, 0.82, 32, 14, 4)
-
-        local Label = New("TextLabel", {
-            BackgroundTransparency = 1,
-            FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
-            Size = UDim2.fromScale(1, 1),
-            Text = "VH",
-            TextColor3 = textColor,
-            TextSize = 0,
-            TextScaled = true,
-            TextStrokeTransparency = 0,
-            TextStrokeColor3 = Color3.fromRGB(80, 0, 0),
-            ZIndex = 5,
-            Parent = Holder,
-        })
-        New("UITextSizeConstraint", { MaxTextSize = 40, MinTextSize = 6, Parent = Label })
-
-        if opts.Pulse ~= false and Library.IconAnimations ~= false then
-            task.spawn(function()
-                while Holder.Parent and not Library.Unloaded do
-                    local T = TweenService:Create(Bg, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                        BackgroundColor3 = Color3.fromRGB(40, 6, 6),
-                    })
-                    T:Play()
-                    task.wait(0.9)
-                    if not Holder.Parent then break end
-                    TweenService:Create(Bg, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                        BackgroundColor3 = Color3.fromRGB(20, 8, 8),
-                    }):Play()
-                    task.wait(0.9)
-                end
-            end)
-        end
-
-        -- STEP 5: efek petir menyambar (random flash)
+    -- STEP 5: efek petir menyambar (random flash) — pakai tabel shards
+    if opts.Pulse ~= false and Library.IconAnimations ~= false then
         task.spawn(function()
             while Holder.Parent and not Library.Unloaded do
                 task.wait(math.random(3, 6))
-                if not Holder.Parent or Library.Unloaded then
-                    break
-                end
-                for _, shard in ipairs(Bolt:GetChildren()) do
-                    if shard:IsA("Frame") then
-                        local oldColor = shard.BackgroundColor3
+                if not Holder.Parent or Library.Unloaded then break end
+                for _, shard in ipairs(shards) do
+                    if shard.Parent then
                         shard.BackgroundColor3 = Color3.fromRGB(255, 220, 220)
-                        task.wait(0.06)
-                        if shard.Parent then
-                            shard.BackgroundColor3 = oldColor
-                        end
+                    end
+                end
+                task.wait(0.06)
+                for _, shard in ipairs(shards) do
+                    if shard.Parent then
+                        shard.BackgroundColor3 = color
+                    end
+                end
+                -- flicker tambahan biar lebih hidup
+                task.wait(0.04)
+                for _, shard in ipairs(shards) do
+                    if shard.Parent then
+                        shard.BackgroundColor3 = Color3.fromRGB(255, 150, 150)
+                    end
+                end
+                task.wait(0.05)
+                for _, shard in ipairs(shards) do
+                    if shard.Parent then
+                        shard.BackgroundColor3 = color
                     end
                 end
             end
         end)
-
-        return Holder, Label, Bolt
     end
-    Library.MakeVHLogo = MakeVHLogo
+
+    return Holder, Label, Bolt
+end
+Library.MakeVHLogo = MakeVHLogo
 
     EmbeddedAssets.corvus = {
         File = "CorvusLogo_201.png",
