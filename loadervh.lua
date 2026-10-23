@@ -4,7 +4,7 @@ local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
 		game:GetService("StarterGui")
-			:SetCore("SendNotification", { Title = "VrilzHub", Text = "Already starting, give it a few seconds", Duration = 5 })
+			:SetCore("SendNotification", { Title = "Corvus", Text = "Already starting, give it a few seconds", Duration = 5 })
 	end)
 	return
 end
@@ -20989,13 +20989,9 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
                 })
             end
     
-                        if WindowInfo.Console ~= false then
+            if WindowInfo.Console ~= false then
                 ConsoleButton, ConsoleImage = CreateTopbarButton(Library:GetIcon("square-terminal"))
                 Library:AddIconHover(ConsoleButton, ConsoleImage, { Scale = 1.15, Tilt = -8 })
-                -- SEMBUNYIKAN: Tombol console tidak ditampilkan
-                if ConsoleButton then
-                    ConsoleButton.Visible = false
-                end
             end
     
             BottomBackground = New("Frame", {
@@ -26380,12 +26376,8 @@ end)
             		end
             	end,
             })
-                       pcall(function()
-                GamesBox.BoxHolder.LayoutOrder = -200
-            end)
-            -- SEMBUNYIKAN: Kotak "Supported Games" tidak ditampilkan
             pcall(function()
-                GamesBox:Hide()
+                GamesBox.BoxHolder.LayoutOrder = -200
             end)
 
             local Session = Tab:AddRightGroupbox("Session", "activity")
@@ -28666,11 +28658,7 @@ end
                 end
     
                 local Ctrl = UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
-                if Ctrl and Input.KeyCode == Enum.KeyCode.Backquote then
-                    Console:Toggle()
-                    return
-                end
-    
+               
                 if not Console.Built then
                     return
                 end
@@ -39446,6 +39434,7 @@ do
 		ToggleKeybind = Enum.KeyCode.RightControl,
 		Center = true,
 		AutoShow = true,
+        Console = false,
 	})
 	function N.addTab(name, icon, description)
 		if Window.AddInfoTab then
@@ -40700,15 +40689,11 @@ do
 			flushLog(true)
 		end)
 	end
-	if Window.AddCommandsTab then
-    pcall(function()
-        Tabs.Commands = Window:AddCommandsTab()
-        -- SEMBUNYIKAN: Tab Console tidak ditampilkan
-        if Tabs.Commands and Tabs.Commands.SetVisible then
-            Tabs.Commands:SetVisible(false)
-        end
-    end)
+
+if Tabs.Commands and Tabs.Commands.Button then
+    Tabs.Commands.Button.Visible = false
 end
+						
 	if Library.SetQuickBar then
 		pcall(function()
 			Library:SetQuickBar({
@@ -40823,11 +40808,8 @@ if Window.AddInfoTab then
 			Text = '<font transparency="0.35">Donations are 100% voluntary, nothing is locked behind them. They help keep Corvus updated.</font>',
 			DoesWrap = true,
 		})
-				right.BoxHolder.LayoutOrder = -100
-		-- SEMBUNYIKAN: Kotak "Support Corvus" tidak ditampilkan
-		pcall(function()
-			right:Hide()
-		end)
+		right.BoxHolder.LayoutOrder = -100
+	end)
 end
 pcall(function()
 	Library.RenderOverlayInfo = function()
