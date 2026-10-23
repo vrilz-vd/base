@@ -2091,7 +2091,19 @@ end
 -- GATE: kalau key belum valid, script asli TIDAK dijalankan
 -- ═══════════════════════════════════════════════════════════════════════
 if not _G.VRILZ_KEY_VALIDATED then
+    warn("[VrilzHub] Key belum valid, stop.")
     return
+end
+
+do
+    local _t = 0
+    while not _G.VRILZ_KEY_VALIDATED and _t < 30 do
+        task.wait(0.5); _t += 0.5
+    end
+    if not _G.VRILZ_KEY_VALIDATED then
+        warn("[VrilzHub] Key tidak valid, script berhenti.")
+        return
+    end
 end
 local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
