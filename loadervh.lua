@@ -202,29 +202,27 @@ do
     end
 
     -- ═══════════════════════════════════════════════════════════════
-    -- AUTO-RESTORE: kalau sudah pernah valid → langsung pass
-    -- ═══════════════════════════════════════════════════════════════
-    local savedKey = loadSavedKey()
-    if savedKey then
-        local valid, msg, data, isNetwork = verifySavedKeyWithServer(savedKey)
-        if valid and data then
-            applyKeyInfo(data, savedKey)
-            local kt = getEnv().VRILZ_KeyType
-            print("[VrilzHub] ✅ Auto-restore key valid:", kt)
-            _G.VRILZ_KEY_VALIDATED = true
-            _G.VRILZ_KeyValidated = true
-            do return end -- lanjut ke script asli
-        elseif isNetwork then
-            print("[VrilzHub] ⚠️ Verify network error, tetap pakai key tersimpan")
-            applyKeyInfo(data or {}, savedKey)
-            getEnv().VRILZ_KeyType = getEnv().VRILZ_KeyType or "PREMIUM"
-            _G.VRILZ_KEY_VALIDATED = true
-            do return end
-        else
-            print("[VrilzHub] ❌ Saved key invalid:", msg)
-            clearSavedKey()
-        end
+-- AUTO-RESTORE: kalau sudah pernah valid → langsung pass
+-- ═══════════════════════════════════════════════════════════════
+local savedKey = loadSavedKey()
+if savedKey then
+    local valid, msg, data, isNetwork = verifySavedKeyWithServer(savedKey)
+    if valid and data then
+        applyKeyInfo(data, savedKey)
+        print("[VrilzHub] ✅ Auto-restore key valid:", getEnv().VRILZ_KeyType)
+        _G.VRILZ_KEY_VALIDATED = true
+        _G.VRILZ_KeyValidated = true
+        -- ⚠️ JANGAN return, biarkan flow lanjut ke blok STARTUP di bawah
+    elseif isNetwork then
+        print("[VrilzHub] ⚠️ Verify network error, tetap pakai key tersimpan")
+        applyKeyInfo(data or {}, savedKey)
+        getEnv().VRILZ_KeyType = getEnv().VRILZ_KeyType or "PREMIUM"
+        _G.VRILZ_KEY_VALIDATED = true
+    else
+        print("[VrilzHub] ❌ Saved key invalid:", msg)
+        clearSavedKey()
     end
+end
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- KEY UI — ArqelUI (persis ui_rideapet) — TANPA auto-unlock Sabtu
@@ -1983,32 +1981,41 @@ local function a_BuildKeyUI(onSuccess)
     -- HANDLE REDEEM — LOGIC VRILZHUB (verifyKeyWithServer)
     -- ============================================================
     local function handleRedeem()
-        local key = textBox.Text:gsub("%s+", "")
-        if key == "" then a_Notify("Error", "Please enter your key", 3, "warning") return end
+    local key = textBox.Text:gsub("%s+", "")
+    if key == "" then a_Notify("Error", "Please enter your key", 3, "warning") return end
 
-        setStatus("verifying")
-        redeemBtn.Active = false
-        task.wait(0.3)
+    setStatus("verifying")
+    redeemBtn.Active = false
+    task.wait(0.3)
 
-        local valid, message, data = verifyKeyWithServer(key)
+    local valid, message, data = verifyKeyWithServer(key)
 
-        redeemBtn.Active = true
+    redeemBtn.Active = true
 
-        if valid then
-            applyKeyInfo(data, key)
-            saveKey(key)
-            setStatus("success", "Access Granted")
-            a_Notify("Success", "Key validated successfully!", 2, "success")
-            task.wait(1)
+    -- ⭐ FALLBACK: kalau network error, tanya user mau offline mode
+    if not valid and (message or ""):find("Cannot connect") then
+        local confirm = Instance.new("TextButton") -- atau pakai a_Notify
+        setStatus("error", "Server offline")
+        a_Notify("Server Error", "Key system offline. Coba lagi nanti.", 5, "error")
+        return
+    end
 
-            closeDoorsThenExit(function()
-                a_disableBlur()
-                A_Tween:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, 0, -0.5, 0)}):Play()
-                A_Tween:Create(mainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-                task.wait(0.4)
-                screenGui:Destroy()
-                if onSuccess then onSuccess() end
-            end)
+    if valid then
+    applyKeyInfo(data, key)
+    saveKey(key)
+    _G.VRILZ_KEY_VALIDATED = true
+    setStatus("success", "Access Granted")
+    a_Notify("Success", "Key validated successfully!", 2, "success")
+    task.wait(1)
+
+    closeDoorsThenExit(function()
+        a_disableBlur()
+        A_Tween:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, 0, -0.5, 0)}):Play()
+        A_Tween:Create(mainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+        task.wait(0.4)
+        screenGui:Destroy()
+        if onSuccess then onSuccess() end
+    end)
         else
             setStatus("error", message or "Invalid key")
             a_Notify("Invalid", message or "Invalid key", 4, "error")
@@ -2054,57 +2061,6 @@ end
 
 _G.VRILZ_ArqelUI = ArqelUI
 
--- ═══════════════════════════════════════════════════════════════════════
--- STARTUP — restore saved key (TANPA auto-unlock Sabtu)
--- ═══════════════════════════════════════════════════════════════════════
-local savedKey = loadSavedKey()
-if savedKey then
-    local valid, msg, data, isNetwork = verifySavedKeyWithServer(savedKey)
-    if valid and data then
-        applyKeyInfo(data, savedKey)
-        print("[VrilzHub] ✅ Auto-restore key valid:", Shared.KeyType)
-        _G.VRILZ_KEY_VALIDATED = true
-        _G.VRILZ_KeyValidated = true
-    elseif isNetwork then
-        print("[VrilzHub] ⚠️ Verify network error, tetap pakai key tersimpan")
-        applyKeyInfo(data or {}, savedKey)
-        Shared.KeyType = Shared.KeyType or "PREMIUM"
-        _G.VRILZ_KEY_VALIDATED = true
-    else
-        print("[VrilzHub] ❌ Saved key invalid:", msg)
-        clearSavedKey()
-    end
-end
-
-if not _G.VRILZ_KEY_VALIDATED then
-    ArqelUI.ShowKeyWindow(function()
-        -- onSuccess: setelah key valid + door tutup + GUI hancur
-        -- (script lanjut ke bawah lewat gate _G.VRILZ_KEY_VALIDATED)
-    end)
-    -- Tunggu sampai user valid atau tutup window
-    while not _G.VRILZ_KEY_VALIDATED do
-        task.wait(0.1)
-    end
-end
-
--- ═══════════════════════════════════════════════════════════════════════
--- GATE: kalau key belum valid, script asli TIDAK dijalankan
--- ═══════════════════════════════════════════════════════════════════════
-if not _G.VRILZ_KEY_VALIDATED then
-    warn("[VrilzHub] Key belum valid, stop.")
-    return
-end
-
-do
-    local _t = 0
-    while not _G.VRILZ_KEY_VALIDATED and _t < 30 do
-        task.wait(0.5); _t += 0.5
-    end
-    if not _G.VRILZ_KEY_VALIDATED then
-        warn("[VrilzHub] Key tidak valid, script berhenti.")
-        return
-    end
-end
 local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
