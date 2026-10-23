@@ -26296,7 +26296,8 @@ end)
                 end,
             })
     
-            local SupportedGames = Info.SupportedGames or {
+            if false then
+                local SupportedGames = Info.SupportedGames or {
                 { Name = "+1 Loot To Forge", PlaceId = 118805555015549 },
                 { Name = "+1 Stone Skipping", PlaceId = 111543903102439 },
                 { Name = "Anime Dice", PlaceId = 113290951185459 },
@@ -26379,6 +26380,7 @@ end)
             pcall(function()
                 GamesBox.BoxHolder.LayoutOrder = -200
             end)
+		end
 
             local Session = Tab:AddRightGroupbox("Session", "activity")
             local GameRow = InfoRow(Session, "Game", "Loading...")
@@ -40735,8 +40737,8 @@ else
 		SaveManager:LoadAutoloadConfig()
 	end)
 end
-if Window.AddInfoTab then
-	local DonateMethods = {
+if false and Window.AddInfoTab then
+    local DonateMethods = {
 		{
 			Id = "PayPal",
 			Icon = "pay-paypal",
