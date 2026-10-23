@@ -1,10 +1,10 @@
 -- credits pngu
--- https://discord.gg/JD4s8wrvVH
+-- https://discord.gg/c3xFCzb4x
 local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
 		game:GetService("StarterGui")
-			:SetCore("SendNotification", { Title = "Corvus", Text = "Already starting, give it a few seconds", Duration = 5 })
+			:SetCore("SendNotification", { Title = "VrilzHub", Text = "Already starting, give it a few seconds", Duration = 5 })
 	end)
 	return
 end
@@ -745,7 +745,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
     
         DiscordCard = {
             Title = "Discord",
-            Description = "Join our community",
+            Description = "Join the vrilz community",
             Invite = "",
             ButtonText = "Join Discord",
             CopiedText = "Invite copied!",
@@ -5394,7 +5394,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
     end
     
     function Library:OpenDiscordInvite(Code: string?): boolean
-        local Invite = tostring(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
+        local Invite = tostring(Library.DiscordInvite or "https://discord.gg/c3xFCzb4x")
         if typeof(Code) ~= "string" or Code == "" then
             Code = string.match(Invite, "([%w%-]+)/?$")
         end
@@ -5429,7 +5429,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
                     local Status = tonumber(Response.StatusCode)
                     local BodyText = tostring(Response.Body or "")
                     if ((Status and Status >= 200 and Status < 300) or Response.Success == true) and not string.find(BodyText, '"evt":"ERROR"', 1, true) then
-                        print("[Corvus] discord invite: rpc")
+                        print("[Vrilz] discord invite: rpc")
                         return true
                     end
                 end
@@ -5922,7 +5922,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 			Width = 320,
 			Timeout = 45,
 			Icon = "message-circle",
-			Title = "Join the Corvus Discord",
+			Title = "Join the VrilzHub Discord",
 			Text = "Updates, codes and support",
 			ConfirmText = "Join Discord",
 			CancelText = "I'm already in, don't ask again",
@@ -5972,7 +5972,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 					FontFace = GetBoldFont,
 					Position = UDim2.fromOffset(62, 44),
 					Size = UDim2.new(1, -62, 0, 16),
-					Text = "Corvus",
+					Text = "Vrilz",
 					TextColor3 = "FontColor",
 					TextSize = 14,
 					TextTruncate = Enum.TextTruncate.AtEnd,
@@ -5984,7 +5984,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 					BackgroundTransparency = 1,
 					Position = UDim2.fromOffset(62, 60),
 					Size = UDim2.new(1, -62, 0, 14),
-					Text = "Corvus community",
+					Text = "Vrilz community",
 					TextColor3 = "FontColor",
 					TextSize = 12,
 					TextTransparency = 0.3,
@@ -6025,7 +6025,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 			table.insert(State.Listeners, Paint)
 			Paint()
 			if Library.FetchCommunity then
-				local _, Code = ParseDiscordInvite(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
+				local _, Code = ParseDiscordInvite(Library.DiscordInvite or "https://discord.gg/c3xFCzb4x")
 				Library.FetchCommunity(Code)
 			end
 		end
@@ -7136,7 +7136,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
     
         pcall(function()
             local function OpenCommunity()
-                local Invite = tostring(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
+                local Invite = tostring(Library.DiscordInvite or "https://discord.gg/c3xFCzb4x")
                 Library:CopyToClipboard(Invite, "Discord invite copied")
                 local Code = string.match(Invite, "([%w%-]+)/?$")
                 if Code then
@@ -20886,7 +20886,7 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
     
                     Library.Window:AddDialog("CorvusClose", {
                         Title = "Close " .. tostring(WindowInfo.Title) .. "?",
-                        Description = "This unloads the hub and stops every feature. You will need to execute the script again to open it.",
+                        Description = "This unloads the vrilzhub and stops every feature. You will need to execute the script again to open it.",
                         AutoDismiss = true,
                         OutsideClickDismiss = true,
                         FooterButtons = {
@@ -28560,7 +28560,7 @@ end
                 end)
     
                 if #Library:GetConsoleLines() == 0 then
-                    Library:ConsoleLog("Welcome to the Corvus console. Type help to begin.", "system")
+                    Library:ConsoleLog("Welcome to the Vrilz console. Type help to begin.", "system")
                 end
             end
     
@@ -29950,7 +29950,7 @@ end
     
                     Library:Notify({
                         Title = WindowInfo.Title,
-                        Description = if Library.IsMobile then "Loaded in the background. Tap the Corvus button to open." else string.format("Loaded in the background. Press %s to open.", KeyName),
+                        Description = if Library.IsMobile then "Loaded in the background. Tap the VrilzHub button to open." else string.format("Loaded in the background. Press %s to open.", KeyName),
                         Time = 6,
                     })
                 end)
@@ -30279,8 +30279,8 @@ end
                     end
                     Library:SetSetting("MobileHintShown", true)
                     Library:Notify({
-                        Title = WindowInfo.Title or "Corvus",
-                        Description = "Tap the round Corvus button to show or hide the hub. Drag it anywhere you like.",
+                        Title = WindowInfo.Title or "VrilzHub",
+Description = "Tap the round VrilzHub button to show or hide the hub. Drag it anywhere you like.",
                         Time = 7,
                     })
                 end)
@@ -32443,7 +32443,7 @@ do
 	SaveManager = loadAddon("SaveManager.lua")
 	Options = Library.Options
 	Toggles = Library.Toggles
-	Discord = "https://discord.gg/JD4s8wrvVH"
+	Discord = "https://discord.gg/c3xFCzb4x"
 	GameName = "Break and Steal an Egg"
 	LoaderScript = 'loadstring(game:HttpGet("' .. HubRepo .. 'Loader"))()'
 	local Env = getgenv()
@@ -39429,7 +39429,7 @@ do
 	end
 	N.uiStart = os.clock()
 	Window = Library:CreateWindow({
-    Title = "Corvus",
+    Title = "VrilzHub",
     Author = "Cinek",
     Theme = "Corvus Silver",
     Icon = "corvus",
@@ -39442,6 +39442,7 @@ do
     AutoShow = true,
     Console = false,
 })
+
 	function N.addTab(name, icon, description)
 		if Window.AddInfoTab then
 			return Window:AddTab({ Name = name, Icon = icon, Description = description })
@@ -39455,7 +39456,7 @@ do
 				Discord = Discord,
 				DiscordAvatar = "corvus-square",
 				DiscordBanner = "corvus-banner",
-				DiscordTitle = "Corvus",
+				DiscordTitle = "VrilzHub",
 				DiscordDescription = "Keyless scripts, updates and support",
 				Feedback = function(Box)
 					Tabs.FeedbackBox = Box
@@ -40125,7 +40126,7 @@ do
 			executor = table.concat({ identifyexecutor() }, " ")
 		end)
 		local lines = {
-			"Corvus debug log  |  " .. GameName,
+			"Vrilz debug log  |  " .. GameName,
 			string.format(
 				"Player %s (@%s)  |  executor %s  |  place %s  |  %s",
 				LocalPlayer.DisplayName,
@@ -40200,7 +40201,7 @@ do
 	end
 	function N.runManual(fn, ...)
 		if N.Manual.running then
-			notify("Corvus", "Still busy with the last action", 3)
+			notify("Vrilz", "Still busy with the last action", 3)
 			return
 		end
 		N.Manual.running = true
@@ -40219,7 +40220,7 @@ do
 			end
 		end
 		N.holdAt(nil)
-		notify("Corvus", "Everything is off", 3)
+		notify("Vrilz", "Everything is off", 3)
 	end
 end
 do
@@ -40773,7 +40774,7 @@ if false and Window.AddInfoTab then
 			Symbol = "PP",
 			Name = "PayPal",
 			Network = "paypal.me",
-			Address = "https://discord.gg/JD4s8wrvVH",
+			Address = "https://discord.gg/c3xFCzb4x",
 			Display = "KrystianKujawski73",
 			Link = true,
 			Color = "#0070e0",
@@ -40785,7 +40786,7 @@ if false and Window.AddInfoTab then
 			Symbol = "BTC",
 			Name = "Bitcoin",
 			Network = "Bitcoin network",
-			Address = "https://discord.gg/JD4s8wrvVH",
+			Address = "https://discord.gg/c3xFCzb4x",
 			Color = "#f7931a",
 			Note = "Only send BTC on the Bitcoin network",
 		},
@@ -40795,7 +40796,7 @@ if false and Window.AddInfoTab then
 			Symbol = "ETH",
 			Name = "Ethereum",
 			Network = "ERC20",
-			Address = "https://discord.gg/JD4s8wrvVH",
+			Address = "https://discord.gg/c3xFCzb4x",
 			Color = "#627eea",
 			Note = "Only send ETH or ERC20 tokens on Ethereum",
 		},
@@ -40805,7 +40806,7 @@ if false and Window.AddInfoTab then
 			Symbol = "SOL",
 			Name = "Solana",
 			Network = "Solana",
-			Address = "https://discord.gg/JD4s8wrvVH",
+			Address = "https://discord.gg/c3xFCzb4x",
 			Color = "#9945ff",
 			Note = "Only send SOL or Solana tokens",
 		},
@@ -40815,7 +40816,7 @@ if false and Window.AddInfoTab then
 			Symbol = "BNB",
 			Name = "BNB",
 			Network = "BNB Smart Chain",
-			Address = "https://discord.gg/JD4s8wrvVH",
+			Address = "https://discord.gg/c3xFCzb4x",
 			Color = "#f0b90b",
 			Note = "Only send on BNB Smart Chain (BEP20)",
 		},
@@ -41442,10 +41443,10 @@ do
 			end
 		end)
 		notify(
-			"Corvus",
-			if Library.IsMobile then "Loaded and ready. The round Corvus button opens and closes the hub." else "Loaded. Press " .. key .. " to hide or show the menu.",
-			5
-		)
+    "VrilzHub",
+    if Library.IsMobile then "Loaded and ready. The round VrilzHub button opens and closes the hub." else "Loaded. Press " .. key .. " to hide or show the menu.",
+    5
+)
 	end
 end
 end, debug.traceback)
@@ -41457,7 +41458,7 @@ if not BootOk then
 	local copied = pcall(setclipboard, report)
 	pcall(function()
 		game:GetService("StarterGui"):SetCore("SendNotification", {
-			Title = "Corvus error",
+			Title = "Vrilz error",
 			Text = if copied
 				then "Hub failed to start. The error is copied, paste it to Cinek."
 				else "Hub failed to start. Press F9 and send the red [Corvus] line.",
