@@ -4,7 +4,7 @@ local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
 		game:GetService("StarterGui")
-			:SetCore("SendNotification", { Title = "Corvus", Text = "Already starting, give it a few seconds", Duration = 5 })
+			:SetCore("SendNotification", { Title = "VrilzHub", Text = "Already starting, give it a few seconds", Duration = 5 })
 	end)
 	return
 end
@@ -5922,8 +5922,8 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 			Width = 320,
 			Timeout = 45,
 			Icon = "message-circle",
-			Title = "Join the Corvus Discord",
-			Text = "Updates, codes and support",
+			Title = "Join the Vrilz Discord",
+			Text = "Updates and support",
 			ConfirmText = "Join Discord",
 			CancelText = "I'm already in, don't ask again",
 			CancelStyle = "link",
@@ -5972,7 +5972,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 					FontFace = GetBoldFont,
 					Position = UDim2.fromOffset(62, 44),
 					Size = UDim2.new(1, -62, 0, 16),
-					Text = "Corvus",
+					Text = "VrilzHub",
 					TextColor3 = "FontColor",
 					TextSize = 14,
 					TextTruncate = Enum.TextTruncate.AtEnd,
@@ -5984,7 +5984,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 					BackgroundTransparency = 1,
 					Position = UDim2.fromOffset(62, 60),
 					Size = UDim2.new(1, -62, 0, 14),
-					Text = "Corvus community",
+					Text = "VrilzHub community",
 					TextColor3 = "FontColor",
 					TextSize = 12,
 					TextTransparency = 0.3,
@@ -39423,8 +39423,8 @@ do
 	end
 	N.uiStart = os.clock()
 	Window = Library:CreateWindow({
-		Title = "Corvus",
-		Author = "Cinek",
+		Title = "VrilzHub",
+		Author = "Vrilz",
 		Theme = "Corvus Silver",
 		Icon = "corvus",
 		Footer = GameName,
@@ -39449,7 +39449,7 @@ do
 				Discord = Discord,
 				DiscordAvatar = "corvus-square",
 				DiscordBanner = "corvus-banner",
-				DiscordTitle = "Corvus",
+				DiscordTitle = "VrilzHub",
 				DiscordDescription = "Keyless scripts, updates and support",
 				Feedback = function(Box)
 					Tabs.FeedbackBox = Box
@@ -40453,7 +40453,7 @@ end)("0b1b060606494c40161f06100c1d1658161c0e4013061c5c140a101e1a1c081c5d47404655
 			local colors = { Idea = 7995310, Bug = 16739978, Question = 6275327, Other = 14146792 }
 			pcall(Library.PostFeedback, kind, text, anonymous, executor)
 			local ok = postWebhook(FeedbackWebhook, {
-				username = "Corvus Feedback",
+				username = "Vrilz Feedback",
 				allowed_mentions = { parse = {} },
 				embeds = {
 					{
@@ -40527,7 +40527,7 @@ end)("0b1b060606494c40161f06100c1d1658161c0e4013061c5c140a101e1a1c081c5d47404655
 						local embed = reportEmbed("\u{2726}  Test from Corvus")
 						embed.author = { name = GameName }
 						embed.footer = { text = "Corvus  \u{00B7}  " .. GameName }
-						local ok, code = postWebhook(url, { username = "Corvus", allowed_mentions = { parse = {} }, embeds = { embed } })
+						local ok, code = postWebhook(url, { username = "Vrilz", allowed_mentions = { parse = {} }, embeds = { embed } })
 						notify("Webhook", if ok then "Test sent" else "Discord answered " .. tostring(code), 4)
 					end)
 				end,
@@ -41408,7 +41408,7 @@ do
 			end
 		end)
 		notify(
-			"Corvus",
+			"VrilzHub",
 			if Library.IsMobile then "Loaded and ready. The round Corvus button opens and closes the hub." else "Loaded. Press " .. key .. " to hide or show the menu.",
 			5
 		)
