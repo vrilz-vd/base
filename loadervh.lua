@@ -1,7 +1,6 @@
--- ═══════════════════════════════════════════════════════════════════════
--- VRILZHUB KEY SYSTEM — ditambahkan di depan, tanpa ubah script asli
--- Validasi pakai endpoint yang sama dengan ui_rideapet (16).lua
--- ═══════════════════════════════════════════════════════════════════════
+-- ═══════════════════════════════════════════════════════════════
+-- VRILZHUB KEY SYSTEM — gate only, hub di-load dari GitHub
+-- ═══════════════════════════════════════════════════════════════
 do
     local KEY_SYSTEM_URL = "https://key-system.vrilzwops.workers.dev"
     local KEY_FILE = "vrilz_key.txt"
@@ -14,8 +13,8 @@ do
     local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
     local function getRequest()
-    return (syn and syn.request) or (http and http.request) or http_request or request
-end
+        return (syn and syn.request) or (http and http.request) or http_request or request
+    end
 
     local function getEnv()
         local ok, e = pcall(function() return getgenv and getgenv() or _G end)
@@ -90,7 +89,6 @@ end
         env.VRILZ_KeyExpiresAt = tonumber(data.expires_at or data.expiry or 0) or 0
     end
 
-    -- Endpoint /api/redeem — SAMA PERSIS dengan ui_rideapet (16).lua
     local function verifyKeyWithServer(key)
         key = tostring(key or ""):gsub("^%s+", ""):gsub("%s+$", ""):upper()
         if key == "" then return false, "Please enter a key first." end
@@ -130,7 +128,6 @@ end
         return false, "Key System server error [HTTP " .. tostring(status) .. "]."
     end
 
-    -- Endpoint /api/verify — untuk key yang sudah tersimpan (restore)
     local function verifySavedKeyWithServer(key)
         key = tostring(key or ""):gsub("^%s+", ""):gsub("%s+$", ""):upper()
         if key == "" then return false, "Saved key is empty.", nil, false end
@@ -179,50 +176,25 @@ end
         return false, msg ~= "" and msg or "Invalid key.", data, false
     end
 
-    -- ═══════════════════════════════════════════════════════════════
-    -- SKIP / BYPASS PREMIUM (Sabtu 19:50–23:59 WIB) — opsional
-    -- ═══════════════════════════════════════════════════════════════
-    local OWNER_USERID = 5126297278
-    local function isPremiumTimeNow()
-        if LocalPlayer.UserId == OWNER_USERID then return true end
-        local ok, result = pcall(function()
-            local wibTime = os.time() + 7 * 3600
-            local wibDate = os.date("!*t", wibTime)
-            if wibDate.wday ~= 7 then return false end
-            local totalMin = wibDate.hour * 60 + wibDate.min
-            return totalMin >= 1190 and totalMin <= 1439
-        end)
-        return ok and result
+    -- AUTO-RESTORE
+    local savedKey = loadSavedKey()
+    if savedKey then
+        local valid, msg, data, isNetwork = verifySavedKeyWithServer(savedKey)
+        if valid and data then
+            applyKeyInfo(data, savedKey)
+            print("[VrilzHub] ✅ Auto-restore key valid:", getEnv().VRILZ_KeyType)
+            _G.VRILZ_KEY_VALIDATED = true
+            _G.VRILZ_KeyValidated = true
+        elseif isNetwork then
+            print("[VrilzHub] ⚠️ Verify network error, tetap pakai key tersimpan")
+            applyKeyInfo(data or {}, savedKey)
+            getEnv().VRILZ_KeyType = getEnv().VRILZ_KeyType or "PREMIUM"
+            _G.VRILZ_KEY_VALIDATED = true
+        else
+            print("[VrilzHub] ❌ Saved key invalid:", msg)
+            clearSavedKey()
+        end
     end
-
-    local function isRealPremiumKey(keyType)
-        if not keyType then return false end
-        local kt = tostring(keyType):upper()
-        return kt == "PREMIUM" or kt == "OWNER" or kt == "VIP"
-    end
-
-    -- ═══════════════════════════════════════════════════════════════
--- AUTO-RESTORE: kalau sudah pernah valid → langsung pass
--- ═══════════════════════════════════════════════════════════════
-local savedKey = loadSavedKey()
-if savedKey then
-    local valid, msg, data, isNetwork = verifySavedKeyWithServer(savedKey)
-    if valid and data then
-        applyKeyInfo(data, savedKey)
-        print("[VrilzHub] ✅ Auto-restore key valid:", getEnv().VRILZ_KeyType)
-        _G.VRILZ_KEY_VALIDATED = true
-        _G.VRILZ_KeyValidated = true
-        -- ⚠️ JANGAN return, biarkan flow lanjut ke blok STARTUP di bawah
-    elseif isNetwork then
-        print("[VrilzHub] ⚠️ Verify network error, tetap pakai key tersimpan")
-        applyKeyInfo(data or {}, savedKey)
-        getEnv().VRILZ_KeyType = getEnv().VRILZ_KeyType or "PREMIUM"
-        _G.VRILZ_KEY_VALIDATED = true
-    else
-        print("[VrilzHub] ❌ Saved key invalid:", msg)
-        clearSavedKey()
-    end
-end
 
 -- ═══════════════════════════════════════════════════════════════════════
 -- KEY UI — ArqelUI (persis ui_rideapet) — TANPA auto-unlock Sabtu
