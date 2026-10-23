@@ -25871,30 +25871,68 @@ Window.MiniIcon = MiniIcon
             Fade(Plate, "BackgroundTransparency", 0.18)
     
             local LogoFrame = New("Frame", {
-                AnchorPoint = Vector2.new(0.5, 0),
-                BackgroundTransparency = 1,
-                Position = UDim2.new(0.5, 0, 0, 26),
-                Size = UDim2.fromOffset(70, 70),
-                ZIndex = Holder.ZIndex + 2,
-                Parent = Holder,
-            })
-            local LogoScale = New("UIScale", {
-                Scale = 0.55,
-                Parent = LogoFrame,
-            })
-            local Logo = New("ImageLabel", {
-                Size = UDim2.fromScale(1, 1),
-                ZIndex = Holder.ZIndex + 2,
-                Parent = LogoFrame,
-            })
-            Fade(Logo, "ImageTransparency", 0)
-            local LogoIcon = Library:GetCustomIcon(WindowInfo.Icon or "corvus")
-            if LogoIcon then
-                Library:ApplyLucideIcon(Logo, LogoIcon)
-                if LogoIcon.IconName then
-                    Library:SetSchemeProperty(Logo, "ImageColor3", "AccentColor")
-                end
-            end
+    AnchorPoint = Vector2.new(0.5, 0),
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0.5, 0, 0, 26),
+    Size = UDim2.fromOffset(70, 70),
+    ZIndex = Holder.ZIndex + 2,
+    Parent = Holder,
+})
+local LogoScale = New("UIScale", { Scale = 0.55, Parent = LogoFrame })
+
+-- VH logo (vector), atau fallback ke corvus icon
+local LogoIcon = Library:GetCustomIcon(WindowInfo.Icon)
+local Logo
+if WindowInfo.Icon == "vhpetir" or not LogoIcon then
+    -- pakai VH vector logo
+    Logo = New("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        ZIndex = Holder.ZIndex + 2,
+        Parent = LogoFrame,
+    })
+    local vhHolder = New("Frame", {
+        BackgroundColor3 = Color3.fromRGB(20, 8, 8),
+        BackgroundTransparency = 0.15,
+        ClipsDescendants = true,
+        Size = UDim2.fromScale(1, 1),
+        ZIndex = Holder.ZIndex + 2,
+        Parent = Logo,
+    })
+    New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = vhHolder })
+    New("UIStroke", {
+        Color = Color3.fromRGB(255, 40, 40),
+        Thickness = 1.5,
+        Transparency = 0.35,
+        Parent = vhHolder,
+    })
+    local vhFace = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        Text = "VH",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 0,
+        TextScaled = true,
+        TextStrokeColor3 = Color3.fromRGB(255, 40, 40),
+        TextStrokeTransparency = 0,
+        FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
+        ZIndex = Holder.ZIndex + 3,
+        Parent = vhHolder,
+    })
+    New("UITextSizeConstraint", { MaxTextSize = 34, MinTextSize = 8, Parent = vhFace })
+    Fade(vhHolder, "BackgroundTransparency", 0.15) -- optional fade
+else
+    Logo = New("ImageLabel", {
+        Size = UDim2.fromScale(1, 1),
+        ZIndex = Holder.ZIndex + 2,
+        Parent = LogoFrame,
+    })
+    Fade(Logo, "ImageTransparency", 0)
+    Library:ApplyLucideIcon(Logo, LogoIcon)
+    if LogoIcon.IconName then
+        Library:SetSchemeProperty(Logo, "ImageColor3", "AccentColor")
+    end
+end
     
             local Ring = New("Frame", {
                 AnchorPoint = Vector2.new(0.5, 0.5),
