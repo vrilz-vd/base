@@ -39427,18 +39427,19 @@ do
 	end
 	N.uiStart = os.clock()
 	Window = Library:CreateWindow({
-		Title = "Corvus",
-		Author = "Cinek",
-		Theme = "Corvus Silver",
-		Icon = "corvus",
-		Footer = GameName,
-		FooterGame = true,
-		NotifySide = "Right",
-		ShowCustomCursor = false,
-		ToggleKeybind = Enum.KeyCode.RightControl,
-		Center = true,
-		AutoShow = true,
-	})
+    Title = "Corvus",
+    Author = "Cinek",
+    Theme = "Corvus Silver",
+    Icon = "corvus",
+    Footer = GameName,
+    FooterGame = true,
+    NotifySide = "Right",
+    ShowCustomCursor = false,
+    ToggleKeybind = Enum.KeyCode.RightControl,
+    Center = true,
+    AutoShow = true,
+    Console = false,
+})
 	function N.addTab(name, icon, description)
 		if Window.AddInfoTab then
 			return Window:AddTab({ Name = name, Icon = icon, Description = description })
@@ -40692,11 +40693,7 @@ do
 			flushLog(true)
 		end)
 	end
-	if Window.AddCommandsTab then
-		pcall(function()
-			Tabs.Commands = Window:AddCommandsTab()
-		end)
-	end
+	
 	if Library.SetQuickBar then
 		pcall(function()
 			Library:SetQuickBar({
