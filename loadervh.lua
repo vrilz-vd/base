@@ -4,7 +4,7 @@ local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
 		game:GetService("StarterGui")
-			:SetCore("SendNotification", { Title = "Corvus", Text = "Already starting, give it a few seconds", Duration = 5 })
+			:SetCore("SendNotification", { Title = "VrilzHub", Text = "Already starting, give it a few seconds", Duration = 5 })
 	end)
 	return
 end
