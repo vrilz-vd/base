@@ -20642,8 +20642,8 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
                 Parent = CurrentTabInfo,
             })
     
-            local BrandTitle = tostring(WindowInfo.Title or "Corvus")
-            local BrandAuthor = if WindowInfo.Author == false then "" else "made by " .. tostring(WindowInfo.Author or "Cinek")
+            local BrandTitle = tostring(WindowInfo.Title or "VrilzHub")
+            local BrandAuthor = if WindowInfo.Author == false then "" else "made by " .. tostring(WindowInfo.Author or "VrilzHub")
             local BrandTitleWidth = Library:GetTextBounds(BrandTitle, GetBoldFont(), 17, 1000)
             local BrandAuthorWidth = if BrandAuthor ~= "" then Library:GetTextBounds(BrandAuthor, Library.Scheme.Font, 12, 1000) else 0
             local BrandWidth = math.ceil(math.max(BrandTitleWidth, BrandAuthorWidth) + 4)
