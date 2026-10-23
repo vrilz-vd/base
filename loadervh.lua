@@ -14,8 +14,8 @@ do
     local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
     local function getRequest()
-        return (syn and syn.request) or (http and http.request) or http_request or request
-    end
+    return (syn and syn.request) or (http and http.request) or http_request or request
+end
 
     local function getEnv()
         local ok, e = pcall(function() return getgenv and getgenv() or _G end)
@@ -2061,7 +2061,103 @@ end
 
 _G.VRILZ_ArqelUI = ArqelUI
 
+-- ═══════════════════════════════════════════════════════════════════════
+-- GATE: Key UI dulu, baru hub
+-- ═══════════════════════════════════════════════════════════════════════
+local function startHub()
+    -- Hub code ada di bawah, DIPANGGIL setelah key valid.
+    -- Karena hub code ada di dalam xpcall top-level (bukan di sini),
+    -- kita cukup set flag supaya hub jalan.
+    local Boot = getgenv()
+    if Boot.CorvusBooting then
+        local elapsed = os.clock() - Boot.CorvusBooting
+        if elapsed < 25 then
+            pcall(function()
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "VrilzHub",
+                    Text = "Already starting, give it a few seconds",
+                    Duration = 5,
+                })
+            end)
+            return
+        end
+        Boot.CorvusBooting = nil
+    end
+    Boot.CorvusBooting = os.clock()
+    _G.VRILZ_HUB_START = true   -- tanda ke xpcall di bawah
+end
+
+if _G.VRILZ_KEY_VALIDATED == true then
+    startHub()
+else
+    ArqelUI.ShowKeyWindow(function()
+        startHub()
+    end)
+end
+
+-- Di bagian xpcall top-level, tambahkan pengecekan:
+local BootOk, BootError = xpcall(function()
+    -- Kalau gate belum set flag, tunggu key dulu
+    if not _G.VRILZ_HUB_START then
+        return   -- atau loop tunggu
+    end
+    local Boot = getgenv()
+    -- ... hub code aslinya ...
+end, debug.traceback)
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- BOOT GUARD — fix stuck / re-execute
+-- ═══════════════════════════════════════════════════════════════════════
 local Boot = getgenv()
+
+-- FIX #1: kalau CorvusBooting nyangkut >25 detik, paksa reset
+if Boot.CorvusBooting then
+    local elapsed = os.clock() - Boot.CorvusBooting
+    if elapsed < 25 then
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "VrilzHub",
+                Text = "Already starting, give it a few seconds",
+                Duration = 5,
+            })
+        end)
+        -- Jangan return, tapi skip startHub via flag
+        do return end  -- ini masih top-level block, AMAN karena return di akhir block
+    end
+    Boot.CorvusBooting = nil
+end
+Boot.CorvusBooting = os.clock()
+
+-- FIX #3: clear sisa library lama sebelum load ulang
+if Boot.CorvusLibrary then
+    pcall(function()
+        if typeof(Boot.CorvusLibrary.Unload) == "function" and not Boot.CorvusLibrary.Unloaded then
+            Boot.CorvusLibrary:Unload()
+        end
+    end)
+    Boot.CorvusLibrary = nil
+end
+
+-- FIX #4: clear container GUI lama
+pcall(function()
+    local containers = { game:GetService("CoreGui") }
+    if typeof(gethui) == "function" then
+        table.insert(containers, gethui())
+    end
+    local pg = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if pg then table.insert(containers, pg) end
+    for _, c in ipairs(containers) do
+        for _, ch in ipairs(c:GetChildren()) do
+            if ch:IsA("ScreenGui") and (ch.Name == "Corvus" or ch.Name == "VH_KeySystem" or ch.Name == "CorvusLoading") then
+                ch:Destroy()
+            end
+        end
+    end
+end)
+
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
 		game:GetService("StarterGui")
@@ -2074,7 +2170,7 @@ if not game:IsLoaded() then
 	game.Loaded:Wait()
 end
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Repl()icatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
 do
 	local waited = 0
@@ -2129,7 +2225,11 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
         return CoreGui
     end
     
-    local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+    local LocalPlayer = Players.LocalPlayer
+if not LocalPlayer then
+    Players.PlayerAdded:Wait()
+    LocalPlayer = Players.LocalPlayer
+end
     local Mouse = cloneref(LocalPlayer:GetMouse())
     
     local Labels = {}
