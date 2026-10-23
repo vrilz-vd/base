@@ -226,386 +226,1864 @@ do
         end
     end
 
-    -- ═══════════════════════════════════════════════════════════════
-    -- KEY UI — port dari Arqel (ui_rideapet) tapi tema VrilzHub biru
-    -- ═══════════════════════════════════════════════════════════════
-    local Theme = {
-        Accent = Color3.fromRGB(132, 176, 255),
-        AccentHover = Color3.fromRGB(90, 140, 230),
-        Background = Color3.fromRGB(6, 7, 11),
-        Header = Color3.fromRGB(19, 21, 30),
-        Input = Color3.fromRGB(28, 30, 42),
-        Text = Color3.fromRGB(245, 247, 255),
-        TextDim = Color3.fromRGB(120, 125, 145),
-        Success = Color3.fromRGB(50, 205, 110),
-        Error = Color3.fromRGB(245, 70, 90),
-        Warning = Color3.fromRGB(255, 180, 50),
-        Divider = Color3.fromRGB(45, 52, 75),
+-- ═══════════════════════════════════════════════════════════════════════
+-- KEY UI — ArqelUI (persis ui_rideapet) — TANPA auto-unlock Sabtu
+-- Logic verify/storage tetap VRILZHUB (verifyKeyWithServer / verifySavedKeyWithServer)
+-- ═══════════════════════════════════════════════════════════════════════
+
+local ArqelUI = {}
+
+-- ===== SERVICES =====
+local A_Tween = TweenService
+local A_UIS = UserInputService
+local A_Http = game:GetService("HttpService")
+local A_WS = workspace
+local A_Run = RunService
+local A_Light = Lighting
+local A_Players = Players
+local A_LP = LocalPlayer
+local A_hui = (gethui and gethui()) or game:GetService("CoreGui")
+
+-- ===== APPEARANCE =====
+local A_Appearance = {
+    Title = "VRILZHUB",
+    Subtitle = "Enter your key to continue",
+    Icon = "rbxassetid://95721401302279",
+    IconSize = UDim2.new(0, 30, 0, 30)
+}
+
+local A_Links = {
+    GetKey = KEY_SYSTEM_URL,
+    Discord = "https://discord.gg/psWhrYWbq"
+}
+
+-- Changelog VRILZHUB
+local A_Changelog = {
+    {
+        Version = "v2.2",
+        Date = "19 Okt 2026",
+        Changes = {
+            "Fly Chard (Character Fly)",
+            "TP Mode (Glide / Fast)",
+            "Gui Stats (FPS / Ping window)",
+            "Auto Event (Halloween Candy)",
+            "Auto Yin Ritual",
+            "Auto Obby (Talk + Finish)",
+            "Infinity Jump",
+            "Live Chat Global",
+            "Webhook Platinum Edition",
+        }
+    },
+    {
+        Version = "v2.1",
+        Date = "10 Okt 2026",
+        Changes = {
+            "Auto Steal (Rarity / Name filter)",
+            "Auto Mutation + Return to Plot",
+            "Egg Executor (Steal from here)",
+            "4K HD Mode + FPS Boost",
+        }
     }
-    local DiscordLink = "https://discord.gg/JD4s8wrvVH"
+}
 
-    local coreGui = (gethui and gethui()) or game:GetService("CoreGui")
-    local oldUI = coreGui:FindFirstChild("VRILZHUB_KeyGate")
-    if oldUI then oldUI:Destroy() end
+-- ===== THEME (Arqel persis — merah gelap) =====
+local A_Theme = {
+    Accent = Color3.fromRGB(139, 0, 0),
+    AccentHover = Color3.fromRGB(170, 20, 20),
+    Background = Color3.fromRGB(15, 15, 15),
+    Header = Color3.fromRGB(20, 20, 20),
+    Input = Color3.fromRGB(25, 25, 25),
+    Text = Color3.fromRGB(255, 255, 255),
+    TextDim = Color3.fromRGB(120, 120, 120),
+    Success = Color3.fromRGB(50, 205, 110),
+    Error = Color3.fromRGB(245, 70, 90),
+    Warning = Color3.fromRGB(255, 180, 50),
+    StatusIdle = Color3.fromRGB(180, 80, 80),
+    Discord = Color3.fromRGB(88, 101, 242),
+    DiscordHover = Color3.fromRGB(114, 137, 218),
+    Divider = Color3.fromRGB(45, 45, 70),
+    Pending = Color3.fromRGB(60, 60, 60)
+}
 
-    -- Blur
-    local blur = Lighting:FindFirstChild("VRILZHUB_KS_Blur")
-    if blur then blur:Destroy() end
-    blur = Instance.new("BlurEffect")
-    blur.Name = "VRILZHUB_KS_Blur"
-    blur.Size = 0
-    blur.Parent = Lighting
-    TweenService:Create(blur, TweenInfo.new(0.4), { Size = 24 }):Play()
+-- ===== INTERNAL =====
+local A_Internal = {
+    BlurEffect = nil,
+    NotificationList = {},
+    IsKeylessMode = false
+}
 
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "VRILZHUB_KeyGate"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.DisplayOrder = 9999
-    gui.Parent = coreGui
+-- ===== ICONS =====
+local A_IconBaseURL = "https://raw.githubusercontent.com/Cobruhehe/expert-octo-doodle/main/Icons/"
+local A_IconFiles = {
+    key = "lucide--key.png",
+    shield = "lucide--shield-minus.png",
+    check = "prime--check-square.png",
+    copy = "flowbite--clipboard-outline.png",
+    discord = "qlementine-icons--discord-16.png",
+    alert = "mdi--alert-octagon-outline.png",
+    lock = "lucide--user-lock.png",
+    loading = "nonicons--loading-16.png",
+    close = "material-symbols--dangerous-outline.png",
+    changelog = "ant-design--sync-outlined.png",
+    logo = "rrjlGmac.png",
+    user = "U.png",
+    clock = "Clock.png",
+    cart = "Cart.png",
+    nogetkey = "lucide--lock.png"
+}
 
-    local vp = workspace.CurrentCamera.ViewportSize
-    local winW = isMobile and math.floor(vp.X * 0.78) or 420
-    local winH = isMobile and math.floor(vp.Y * 0.55) or 380
+local A_FallbackIcons = {
+    key = "rbxassetid://96510194465420",
+    shield = "rbxassetid://89965059528921",
+    check = "rbxassetid://76078495178149",
+    copy = "rbxassetid://125851897718493",
+    discord = "rbxassetid://83278450537116",
+    alert = "rbxassetid://140438367956051",
+    lock = "rbxassetid://114355063515473",
+    loading = "rbxassetid://116535712789945",
+    close = "rbxassetid://6022668916",
+    changelog = "rbxassetid://138133190015277",
+    logo = "rbxassetid://95721401302279",
+    user = "rbxassetid://77400125196692",
+    clock = "rbxassetid://87505349362628",
+    cart = "rbxassetid://114754518183872",
+    nogetkey = "rbxassetid://119765975153029"
+}
 
-    local main = Instance.new("Frame")
-    main.Name = "Main"
-    main.AnchorPoint = Vector2.new(0.5, 0.5)
-    main.Position = UDim2.fromScale(0.5, 1.5)
-    main.Size = UDim2.fromOffset(winW, winH)
-    main.BackgroundColor3 = Theme.Background
-    main.BorderSizePixel = 0
-    main.Parent = gui
-    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
+local A_CachedIcons = {}
+local A_FolderName = "VRILZHUB_KS"
+local A_IconsFolder = "Icons"
+local A_DefaultLogoAsset = "rbxassetid://95721401302279"
 
-    local stroke = Instance.new("UIStroke", main)
-    stroke.Color = Theme.Accent
-    stroke.Thickness = 2
-    stroke.Transparency = 0.3
+-- ===== HELPER =====
+local function a_isMobile()
+    return A_UIS.TouchEnabled and not A_UIS.KeyboardEnabled
+end
 
-    -- Header
-    local header = Instance.new("Frame")
-    header.Size = UDim2.new(1, 0, 0, 52)
-    header.BackgroundColor3 = Theme.Header
-    header.BorderSizePixel = 0
-    header.Active = true
-    header.Parent = main
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 14)
-    local hFix = Instance.new("Frame")
-    hFix.Size = UDim2.new(1, 0, 0, 10)
-    hFix.Position = UDim2.new(0, 0, 1, -10)
-    hFix.BackgroundColor3 = Theme.Header
-    hFix.BorderSizePixel = 0
-    hFix.Parent = header
-    local hLine = Instance.new("Frame")
-    hLine.Size = UDim2.new(1, 0, 0, 1)
-    hLine.Position = UDim2.new(0, 0, 1, 0)
-    hLine.BackgroundColor3 = Theme.Accent
-    hLine.BackgroundTransparency = 0.5
-    hLine.BorderSizePixel = 0
-    hLine.Parent = header
+local function a_getScale()
+    local vp = A_WS.CurrentCamera.ViewportSize
+    return math.clamp(math.min(vp.X, vp.Y) / 900, 0.65, 1.3)
+end
 
-    local logo = Instance.new("TextLabel")
-    logo.Size = UDim2.fromOffset(32, 32)
-    logo.Position = UDim2.new(0, 12, 0.5, 0)
-    logo.AnchorPoint = Vector2.new(0, 0.5)
-    logo.BackgroundColor3 = Theme.Accent
-    logo.Text = "VH"
-    logo.TextColor3 = Color3.new(1, 1, 1)
-    logo.Font = Enum.Font.GothamBlack
-    logo.TextSize = 15
-    logo.Parent = header
-    Instance.new("UICorner", logo).CornerRadius = UDim.new(0, 8)
+local function a_hasFileSystem()
+    local ok1 = pcall(function() return type(writefile) == "function" end)
+    local ok2 = pcall(function() return type(readfile) == "function" end)
+    local ok3 = pcall(function() return type(isfile) == "function" end)
+    local ok4 = pcall(function() return type(makefolder) == "function" end)
+    local ok5 = pcall(function() return type(isfolder) == "function" end)
+    return ok1 and ok2 and ok3 and ok4 and ok5
+end
 
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -60, 1, 0)
-    title.Position = UDim2.fromOffset(52, 0)
-    title.BackgroundTransparency = 1
-    title.Text = "VRILZHUB · Break & Steal an Egg"
-    title.TextColor3 = Theme.Text
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = isMobile and 13 or 15
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = header
+local a_fsSupported = a_hasFileSystem()
 
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.fromOffset(28, 28)
-    closeBtn.Position = UDim2.new(1, -10, 0.5, 0)
-    closeBtn.AnchorPoint = Vector2.new(1, 0.5)
-    closeBtn.BackgroundColor3 = Theme.Input
-    closeBtn.Text = "×"
-    closeBtn.TextColor3 = Theme.TextDim
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 18
-    closeBtn.BorderSizePixel = 0
-    closeBtn.Parent = header
-    Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1, 0)
+local function a_ensureFolders()
+    if not a_fsSupported then return false end
+    pcall(function()
+        if not isfolder(A_FolderName) then makefolder(A_FolderName) end
+        if not isfolder(A_FolderName .. "/" .. A_IconsFolder) then makefolder(A_FolderName .. "/" .. A_IconsFolder) end
+    end)
+    return true
+end
 
-    closeBtn.MouseButton1Click:Connect(function()
-        TweenService:Create(blur, TweenInfo.new(0.3), { Size = 0 }):Play()
-        TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-            Position = UDim2.fromScale(0.5, 1.5),
-        }):Play()
-        task.wait(0.4)
-        if blur then blur:Destroy() end
-        gui:Destroy()
+local function a_getIconPath(name)
+    return A_FolderName .. "/" .. A_IconsFolder .. "/" .. A_IconFiles[name]
+end
+
+local function a_isIconCached(name)
+    if not a_fsSupported then return false end
+    local ok, res = pcall(function() return isfile(a_getIconPath(name)) end)
+    return ok and res
+end
+
+local function a_downloadIcon(name)
+    if not a_fsSupported then
+        A_CachedIcons[name] = A_FallbackIcons[name]
+        return false
+    end
+    local path = a_getIconPath(name)
+    if a_isIconCached(name) then
+        local ok = pcall(function() A_CachedIcons[name] = getcustomasset(path) end)
+        if ok then return true end
+    end
+    local ok = pcall(function()
+        local res = game:HttpGet(A_IconBaseURL .. A_IconFiles[name])
+        if #res < 100 then error("Invalid") end
+        writefile(path, res)
+        A_CachedIcons[name] = getcustomasset(path)
+    end)
+    if not ok then A_CachedIcons[name] = A_FallbackIcons[name] end
+    return ok
+end
+
+local function a_getIcon(name)
+    return A_CachedIcons[name] or A_FallbackIcons[name]
+end
+
+local function a_getLogoIcon()
+    if A_Appearance.Icon == A_DefaultLogoAsset then return a_getIcon("logo") end
+    return A_Appearance.Icon
+end
+
+local function a_shouldDownloadLogo()
+    return A_Appearance.Icon == A_DefaultLogoAsset
+end
+
+local function a_allIconsCached()
+    if not a_fsSupported then return false end
+    local list = {"key","shield","check","copy","discord","alert","lock","loading","close","changelog","user","clock","cart","nogetkey"}
+    if a_shouldDownloadLogo() then table.insert(list, "logo") end
+    for _, n in ipairs(list) do
+        if not a_isIconCached(n) then return false end
+    end
+    return true
+end
+
+local function a_loadAllIcons()
+    a_ensureFolders()
+    local list = {"key","shield","check","copy","discord","alert","lock","loading","close","changelog","user","clock","cart","nogetkey"}
+    if a_shouldDownloadLogo() then table.insert(list, "logo") end
+    for _, n in ipairs(list) do a_downloadIcon(n) end
+end
+
+local function a_ensureIconsReady(cb)
+    if a_allIconsCached() then
+        a_loadAllIcons()
+        if cb then cb() end
+    else
+        a_ensureFolders()
+        a_loadAllIcons()
+        if cb then cb() end
+    end
+end
+
+local function a_getExecutorName()
+    local ok, name = pcall(identifyexecutor)
+    if ok and name then return tostring(name) end
+    return "Unknown"
+end
+
+local function a_getDeviceType()
+    local t = A_UIS.TouchEnabled
+    local k = A_UIS.KeyboardEnabled
+    local g = A_UIS.GamepadEnabled
+    if g and not k and not t then return "Console"
+    elseif t and not k then return "Mobile"
+    elseif k and t then return "PC & Touch"
+    elseif k then return "PC"
+    else return "Unknown" end
+end
+
+local function a_getHWID()
+    local hwid = nil
+    pcall(function() if gethwid then hwid = gethwid() end end)
+    if not hwid then pcall(function() if getgenv().HWID then hwid = getgenv().HWID end end) end
+    if not hwid then pcall(function() if game.RobloxHWID then hwid = tostring(game.RobloxHWID) end end) end
+    if not hwid then
+        hwid = A_Http:GenerateGUID(false):gsub("-", ""):sub(1, 32)
+        if A_LP then hwid = tostring(A_LP.UserId) .. hwid:sub(1, 20) end
+    end
+    return hwid or "N/A"
+end
+
+local function a_generateHiddenDots(w, cw)
+    cw = cw or 5
+    local n = math.max(math.floor(w / cw), 8)
+    return string.rep("•", n)
+end
+
+local function a_formatTime12()
+    local h = tonumber(os.date("%H"))
+    local m = os.date("%M")
+    local s = os.date("%S")
+    local p = "AM"
+    if h >= 12 then p = "PM" end
+    if h > 12 then h = h - 12 end
+    if h == 0 then h = 12 end
+    return string.format("%d:%s:%s %s", h, m, s, p)
+end
+
+local function a_formatDate()
+    return os.date("%b %d, %Y")
+end
+
+-- ===== BLUR =====
+local function a_enableBlur()
+    local existing = A_Light:FindFirstChild("VH_KS_Blur")
+    if existing then existing:Destroy() end
+    A_Internal.BlurEffect = Instance.new("BlurEffect")
+    A_Internal.BlurEffect.Name = "VH_KS_Blur"
+    A_Internal.BlurEffect.Size = 0
+    A_Internal.BlurEffect.Parent = A_Light
+    A_Tween:Create(A_Internal.BlurEffect, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Size = 24}):Play()
+end
+
+local function a_disableBlur()
+    if A_Internal.BlurEffect and A_Internal.BlurEffect.Parent then
+        A_Tween:Create(A_Internal.BlurEffect, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {Size = 0}):Play()
+        task.delay(0.3, function()
+            if A_Internal.BlurEffect and A_Internal.BlurEffect.Parent then
+                A_Internal.BlurEffect:Destroy()
+                A_Internal.BlurEffect = nil
+            end
+        end)
+    else
+        local ex = A_Light:FindFirstChild("VH_KS_Blur")
+        if ex then ex:Destroy() end
+        A_Internal.BlurEffect = nil
+    end
+end
+
+-- ===== DRAG =====
+local function a_setupDragging(header, main)
+    local dragging, dragStart, startPos, dragInput
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = main.Position
+            dragInput = input
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    if dragInput == input then dragging = false dragInput = nil end
+                end
+            end)
+        end
+    end)
+    A_UIS.InputChanged:Connect(function(input)
+        if not dragging or not dragInput then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            local d = input.Position - dragStart
+            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+        elseif input.UserInputType == Enum.UserInputType.Touch then
+            if input == dragInput then
+                local d = input.Position - dragStart
+                main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            end
+        end
+    end)
+end
+
+-- ===== NOTIFY (Arqel style — bottom-right, progress bar, stacking) =====
+local function a_Notify(title, message, duration, iconType)
+    duration = duration or 5
+    iconType = iconType or "info"
+    local scale = a_getScale()
+    local width = math.clamp(320 * scale, 260, 380)
+    local height = math.clamp(80 * scale, 75, 105)
+
+    local notifGui = Instance.new("ScreenGui")
+    notifGui.ResetOnSpawn = false
+    notifGui.DisplayOrder = 999999
+    notifGui.Parent = A_hui
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, width, 0, height)
+    frame.Position = UDim2.new(1, width + 20, 1, -15)
+    frame.AnchorPoint = Vector2.new(1, 1)
+    frame.BackgroundColor3 = A_Theme.Header
+    frame.BorderSizePixel = 0
+    frame.Parent = notifGui
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 4)
+
+    local stroke = Instance.new("UIStroke", frame)
+    stroke.Color = A_Theme.Accent
+    stroke.Thickness = 1
+    stroke.Transparency = 0.7
+
+    local progressBg = Instance.new("Frame")
+    progressBg.Size = UDim2.new(1, 0, 0, 2)
+    progressBg.Position = UDim2.new(0, 0, 1, -2)
+    progressBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    progressBg.BorderSizePixel = 0
+    progressBg.Parent = frame
+
+    local progressBar = Instance.new("Frame")
+    progressBar.Size = UDim2.new(1, 0, 1, 0)
+    progressBar.BackgroundColor3 = A_Theme.Accent
+    progressBar.BorderSizePixel = 0
+    progressBar.Parent = progressBg
+
+    local iconSize = height - 35
+    local icon = Instance.new("ImageLabel")
+    icon.Size = UDim2.new(0, iconSize, 0, iconSize)
+    icon.Position = UDim2.new(0, 14, 0.5, -2)
+    icon.AnchorPoint = Vector2.new(0, 0.5)
+    icon.BackgroundTransparency = 1
+    icon.ScaleType = Enum.ScaleType.Fit
+    icon.Parent = frame
+
+    local iconMap = {
+        success = {"check", A_Theme.Success}, error = {"alert", A_Theme.Error},
+        warning = {"alert", A_Theme.Warning}, shield = {"shield", A_Theme.Accent},
+        info = {"shield", A_Theme.Accent}, key = {"key", A_Theme.Accent},
+        copy = {"copy", A_Theme.Success}, discord = {"discord", A_Theme.Discord},
+        close = {"close", A_Theme.Error}, nogetkey = {"nogetkey", A_Theme.TextDim}
+    }
+
+    if iconMap[iconType] then
+        icon.Image = a_getIcon(iconMap[iconType][1])
+        icon.ImageColor3 = iconMap[iconType][2]
+    else
+        icon.Image = a_getLogoIcon()
+        icon.ImageColor3 = A_Theme.Text
+    end
+
+    local textX = 14 + iconSize + 14
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -(textX + 14), 0, 24)
+    titleLabel.Position = UDim2.new(0, textX, 0, 12)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Font = Enum.Font.ArimoBold
+    titleLabel.TextSize = math.clamp(15 * scale, 13, 18)
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.TextColor3 = A_Theme.Text
+    titleLabel.Text = title
+    titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    titleLabel.Parent = frame
+
+    local messageLabel = Instance.new("TextLabel")
+    messageLabel.Size = UDim2.new(1, -(textX + 14), 0, 22)
+    messageLabel.Position = UDim2.new(0, textX, 0, 38)
+    messageLabel.BackgroundTransparency = 1
+    messageLabel.Font = Enum.Font.ArimoBold
+    messageLabel.TextSize = math.clamp(13 * scale, 11, 15)
+    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+    messageLabel.TextColor3 = A_Theme.TextDim
+    messageLabel.Text = message
+    messageLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    messageLabel.Parent = frame
+
+    local id = tick() .. A_Http:GenerateGUID(false)
+    table.insert(A_Internal.NotificationList, {id = id, frame = frame, gui = notifGui, height = height})
+
+    local function restack()
+        local yOff = 0
+        for i = #A_Internal.NotificationList, 1, -1 do
+            local n = A_Internal.NotificationList[i]
+            if n and n.frame and n.frame.Parent then
+                A_Tween:Create(n.frame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {Position = UDim2.new(1, -15, 1, -15 - yOff)}):Play()
+                yOff = yOff + n.height + 12
+            end
+        end
+    end
+
+    A_Tween:Create(frame, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Position = UDim2.new(1, -15, 1, -15)}):Play()
+    task.wait(0.1)
+    restack()
+
+    local function dismiss()
+        for i, n in ipairs(A_Internal.NotificationList) do
+            if n.id == id then table.remove(A_Internal.NotificationList, i) break end
+        end
+        A_Tween:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {Position = UDim2.new(1, width + 20, frame.Position.Y.Scale, frame.Position.Y.Offset)}):Play()
+        task.wait(0.3)
+        notifGui:Destroy()
+        restack()
+    end
+
+    A_Tween:Create(progressBar, TweenInfo.new(duration, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)}):Play()
+    task.delay(duration, dismiss)
+
+    local clickBtn = Instance.new("TextButton")
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+    clickBtn.Parent = frame
+    clickBtn.MouseButton1Click:Connect(dismiss)
+end
+
+-- ===== DOOR OVERLAY =====
+local function a_CreateDoorOverlay(parentFrame, width, height)
+    local overlay = Instance.new("Frame")
+    overlay.Name = "DoorOverlay"
+    overlay.Size = UDim2.new(1, 0, 1, 0)
+    overlay.BackgroundTransparency = 1
+    overlay.ClipsDescendants = true
+    overlay.ZIndex = 50
+    overlay.Parent = parentFrame
+
+    local leftDoor = Instance.new("Frame")
+    leftDoor.Name = "LeftDoor"
+    leftDoor.Size = UDim2.new(0.5, 0, 1, 0)
+    leftDoor.BackgroundColor3 = A_Theme.Header
+    leftDoor.BorderSizePixel = 0
+    leftDoor.ZIndex = 51
+    leftDoor.Parent = overlay
+
+    local rightDoor = Instance.new("Frame")
+    rightDoor.Name = "RightDoor"
+    rightDoor.Size = UDim2.new(0.5, 0, 1, 0)
+    rightDoor.Position = UDim2.new(0.5, 0, 0, 0)
+    rightDoor.BackgroundColor3 = A_Theme.Header
+    rightDoor.BorderSizePixel = 0
+    rightDoor.ZIndex = 51
+    rightDoor.Parent = overlay
+
+    local logoSize = math.min(width, height) * 0.28
+    local logoHolder = Instance.new("Frame")
+    logoHolder.Name = "DoorLogo"
+    logoHolder.Size = UDim2.new(0, logoSize, 0, logoSize)
+    logoHolder.Position = UDim2.new(0.5, 0, 0.5, 0)
+    logoHolder.AnchorPoint = Vector2.new(0.5, 0.5)
+    logoHolder.BackgroundColor3 = A_Theme.Background
+    logoHolder.BackgroundTransparency = 0.1
+    logoHolder.BorderSizePixel = 0
+    logoHolder.ClipsDescendants = true
+    logoHolder.ZIndex = 54
+    logoHolder.Parent = overlay
+
+    local dlCorner = Instance.new("UICorner")
+    dlCorner.CornerRadius = UDim.new(0, 10)
+    dlCorner.Parent = logoHolder
+
+    local dlStroke = Instance.new("UIStroke")
+    dlStroke.Color = A_Theme.Accent
+    dlStroke.Thickness = 2
+    dlStroke.Transparency = 0.15
+    dlStroke.Parent = logoHolder
+
+    local dlTextSize = math.floor(logoSize * 0.42)
+
+    local dlShadow = Instance.new("TextLabel")
+    dlShadow.Size = UDim2.fromScale(1, 1)
+    dlShadow.Position = UDim2.fromOffset(2, 3)
+    dlShadow.BackgroundTransparency = 1
+    dlShadow.Text = "VH"
+    dlShadow.TextColor3 = Color3.fromRGB(0, 0, 0)
+    dlShadow.TextTransparency = 0.05
+    dlShadow.Font = Enum.Font.GothamBlack
+    dlShadow.TextSize = dlTextSize
+    dlShadow.ZIndex = 55
+    dlShadow.Parent = logoHolder
+
+    local dlDepth = Instance.new("TextLabel")
+    dlDepth.Size = UDim2.fromScale(1, 1)
+    dlDepth.Position = UDim2.fromOffset(1, 1)
+    dlDepth.BackgroundTransparency = 1
+    dlDepth.Text = "VH"
+    dlDepth.TextColor3 = A_Theme.Accent
+    dlDepth.Font = Enum.Font.GothamBlack
+    dlDepth.TextSize = dlTextSize
+    dlDepth.ZIndex = 56
+    dlDepth.Parent = logoHolder
+
+    local dlFace = Instance.new("TextLabel")
+    dlFace.Size = UDim2.fromScale(1, 1)
+    dlFace.BackgroundTransparency = 1
+    dlFace.Text = "VH"
+    dlFace.TextColor3 = A_Theme.Text
+    dlFace.Font = Enum.Font.GothamBlack
+    dlFace.TextSize = dlTextSize
+    dlFace.TextStrokeColor3 = A_Theme.Accent
+    dlFace.TextStrokeTransparency = 0
+    dlFace.ZIndex = 57
+    dlFace.Parent = logoHolder
+
+    local dlLightningHolder = Instance.new("Frame")
+    dlLightningHolder.Size = UDim2.fromScale(1, 1)
+    dlLightningHolder.BackgroundTransparency = 1
+    dlLightningHolder.ClipsDescendants = true
+    dlLightningHolder.ZIndex = 58
+    dlLightningHolder.Parent = logoHolder
+
+    local doorSegments = {
+        {0.18, 0.15, logoSize * 0.35, -30},
+        {0.80, 0.30, logoSize * 0.30, 35},
+        {0.15, 0.55, logoSize * 0.38, -25},
+        {0.85, 0.72, logoSize * 0.28, 30},
+        {0.50, 0.10, logoSize * 0.22, 0},
+    }
+
+    local dlBolts = {}
+    for _, seg in ipairs(doorSegments) do
+        local bolt = Instance.new("Frame")
+        bolt.AnchorPoint = Vector2.new(0.5, 0.5)
+        bolt.Size = UDim2.fromOffset(2, seg[3])
+        bolt.Position = UDim2.fromScale(seg[1], seg[2])
+        bolt.Rotation = seg[4]
+        bolt.BackgroundColor3 = Color3.fromRGB(170, 220, 255)
+        bolt.BackgroundTransparency = 1
+        bolt.BorderSizePixel = 0
+        bolt.ZIndex = 59
+        bolt.Parent = dlLightningHolder
+        local bc = Instance.new("UICorner")
+        bc.CornerRadius = UDim.new(1, 0)
+        bc.Parent = bolt
+        table.insert(dlBolts, bolt)
+    end
+
+    task.spawn(function()
+        while logoHolder.Parent do
+            task.wait(math.random(12, 30) / 10)
+            if not logoHolder.Parent then break end
+            for _, bolt in ipairs(dlBolts) do
+                bolt.BackgroundTransparency = 0
+                task.wait(0.05)
+                bolt.BackgroundTransparency = 1
+            end
+            task.wait(0.08)
+            for _, bolt in ipairs(dlBolts) do
+                bolt.BackgroundTransparency = 0
+                task.wait(0.03)
+                bolt.BackgroundTransparency = 1
+            end
+        end
     end)
 
-    -- Status
+    local halfWidth = math.ceil(width / 2)
+
+    local function openDoors(cb)
+        A_Tween:Create(logoHolder, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {BackgroundTransparency = 1}):Play()
+        for _, child in ipairs(logoHolder:GetChildren()) do
+            if child:IsA("TextLabel") then
+                A_Tween:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quart), {TextTransparency = 1}):Play()
+            end
+        end
+        task.wait(0.25)
+        A_Tween:Create(leftDoor, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(0, -halfWidth, 0, 0)}):Play()
+        A_Tween:Create(rightDoor, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 0, 0, 0)}):Play()
+        task.wait(0.45)
+        overlay.Visible = false
+        if cb then cb() end
+    end
+
+    local function closeDoors(cb)
+        overlay.Visible = true
+        leftDoor.Position = UDim2.new(0, -halfWidth, 0, 0)
+        rightDoor.Position = UDim2.new(1, 0, 0, 0)
+        logoHolder.BackgroundTransparency = 1
+        for _, child in ipairs(logoHolder:GetChildren()) do
+            if child:IsA("TextLabel") then
+                child.TextTransparency = 1
+            end
+        end
+        A_Tween:Create(leftDoor, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+        A_Tween:Create(rightDoor, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0, 0)}):Play()
+        task.wait(0.38)
+        A_Tween:Create(logoHolder, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.1}):Play()
+        for _, child in ipairs(logoHolder:GetChildren()) do
+            if child:IsA("TextLabel") then
+                A_Tween:Create(child, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {TextTransparency = 0}):Play()
+            end
+        end
+        task.wait(0.3)
+        if cb then cb() end
+    end
+
+    return {overlay = overlay, open = openDoors, close = closeDoors}
+end
+
+-- ===== CHANGELOG PANEL =====
+local function a_CreateChangelogPanel(parent, windowWidth, panelHeight, panelWidth, mainFrame, gap)
+    panelWidth = panelWidth or 220
+    local isOpen = false
+
+    local panel = Instance.new("Frame")
+    panel.Name = "ChangelogPanel"
+    panel.Size = UDim2.new(0, 0, 0, panelHeight)
+    panel.Position = UDim2.new(1, gap, 0, 0)
+    panel.BackgroundColor3 = A_Theme.Background
+    panel.BorderSizePixel = 0
+    panel.ClipsDescendants = true
+    panel.Parent = mainFrame
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 4)
+
+    local panelStroke = Instance.new("UIStroke", panel)
+    panelStroke.Color = A_Theme.Accent
+    panelStroke.Thickness = 2
+    panelStroke.Transparency = 1
+
+    local panelHeader = Instance.new("Frame")
+    panelHeader.Size = UDim2.new(1, 0, 0, 50)
+    panelHeader.BackgroundColor3 = A_Theme.Header
+    panelHeader.BorderSizePixel = 0
+    panelHeader.Parent = panel
+    Instance.new("UICorner", panelHeader).CornerRadius = UDim.new(0, 4)
+
+    local panelHeaderFix = Instance.new("Frame")
+    panelHeaderFix.Size = UDim2.new(1, 0, 0, 8)
+    panelHeaderFix.Position = UDim2.new(0, 0, 1, -8)
+    panelHeaderFix.BackgroundColor3 = A_Theme.Header
+    panelHeaderFix.BorderSizePixel = 0
+    panelHeaderFix.Parent = panelHeader
+
+    local panelHeaderLine = Instance.new("Frame")
+    panelHeaderLine.Size = UDim2.new(1, 0, 0, 1)
+    panelHeaderLine.Position = UDim2.new(0, 0, 1, 0)
+    panelHeaderLine.BackgroundColor3 = A_Theme.Accent
+    panelHeaderLine.BackgroundTransparency = 0.6
+    panelHeaderLine.BorderSizePixel = 0
+    panelHeaderLine.Parent = panelHeader
+
+    local panelHeaderIcon = Instance.new("ImageLabel")
+    panelHeaderIcon.Size = UDim2.new(0, 16, 0, 16)
+    panelHeaderIcon.Position = UDim2.new(0, 12, 0.5, 0)
+    panelHeaderIcon.AnchorPoint = Vector2.new(0, 0.5)
+    panelHeaderIcon.BackgroundTransparency = 1
+    panelHeaderIcon.Image = a_getIcon("changelog")
+    panelHeaderIcon.ImageColor3 = A_Theme.Accent
+    panelHeaderIcon.ScaleType = Enum.ScaleType.Fit
+    panelHeaderIcon.Parent = panelHeader
+
+    local panelTitle = Instance.new("TextLabel")
+    panelTitle.Size = UDim2.new(1, -65, 1, 0)
+    panelTitle.Position = UDim2.new(0, 34, 0, 0)
+    panelTitle.BackgroundTransparency = 1
+    panelTitle.Text = "Changelog"
+    panelTitle.TextColor3 = A_Theme.Text
+    panelTitle.TextSize = 16
+    panelTitle.Font = Enum.Font.ArimoBold
+    panelTitle.TextXAlignment = Enum.TextXAlignment.Left
+    panelTitle.Parent = panelHeader
+
+    local panelClose = Instance.new("ImageButton")
+    panelClose.Size = UDim2.new(0, 20, 0, 20)
+    panelClose.Position = UDim2.new(1, -14, 0.5, 0)
+    panelClose.AnchorPoint = Vector2.new(1, 0.5)
+    panelClose.BackgroundTransparency = 1
+    panelClose.Image = a_getIcon("close")
+    panelClose.ImageColor3 = A_Theme.TextDim
+    panelClose.ScaleType = Enum.ScaleType.Fit
+    panelClose.Parent = panelHeader
+    panelClose.MouseEnter:Connect(function() A_Tween:Create(panelClose, TweenInfo.new(0.15), {ImageColor3 = A_Theme.Error}):Play() end)
+    panelClose.MouseLeave:Connect(function() A_Tween:Create(panelClose, TweenInfo.new(0.15), {ImageColor3 = A_Theme.TextDim}):Play() end)
+
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Size = UDim2.new(1, 0, 1, -55)
+    scrollFrame.Position = UDim2.new(0, 0, 0, 55)
+    scrollFrame.BackgroundTransparency = 1
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.ScrollBarThickness = 4
+    scrollFrame.ScrollBarImageColor3 = A_Theme.Accent
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    scrollFrame.Parent = panel
+
+    local isMobCL = a_isMobile()
+    local clPadSide  = isMobCL and 14 or 10
+    local clPadTopBot = isMobCL and 8  or 5
+    local clGap      = isMobCL and 14 or 10
+
+    local sp = Instance.new("UIPadding", scrollFrame)
+    sp.PaddingLeft   = UDim.new(0, clPadSide)
+    sp.PaddingRight  = UDim.new(0, clPadSide)
+    sp.PaddingTop    = UDim.new(0, clPadTopBot)
+    sp.PaddingBottom = UDim.new(0, clPadTopBot)
+
+    local cl = Instance.new("UIListLayout", scrollFrame)
+    cl.Padding = UDim.new(0, clGap)
+    cl.SortOrder = Enum.SortOrder.LayoutOrder
+
+    for i, update in ipairs(A_Changelog) do
+        local entry = Instance.new("Frame")
+        entry.Size = UDim2.new(1, 0, 0, 0)
+        entry.AutomaticSize = Enum.AutomaticSize.Y
+        entry.BackgroundTransparency = 1
+        entry.LayoutOrder = i * 2
+        entry.Parent = scrollFrame
+
+        local el = Instance.new("UIListLayout", entry)
+        el.Padding = UDim.new(0, isMobCL and 8 or 5)
+
+        local vLbl = Instance.new("TextLabel")
+        vLbl.Size = UDim2.new(1, 0, 0, isMobCL and 28 or 22)
+        vLbl.BackgroundTransparency = 1
+        vLbl.Text = update.Version .. "  •  " .. update.Date
+        vLbl.TextColor3 = A_Theme.Accent
+        vLbl.TextSize = 14
+        vLbl.Font = Enum.Font.ArimoBold
+        vLbl.TextXAlignment = Enum.TextXAlignment.Left
+        vLbl.LayoutOrder = 1
+        vLbl.Parent = entry
+
+        for j, change in ipairs(update.Changes) do
+            local cLbl = Instance.new("TextLabel")
+            cLbl.Size = UDim2.new(1, 0, 0, 0)
+            cLbl.AutomaticSize = Enum.AutomaticSize.Y
+            cLbl.BackgroundTransparency = 1
+            cLbl.Text = "  •  " .. change
+            cLbl.TextColor3 = A_Theme.TextDim
+            cLbl.TextSize = 12
+            cLbl.Font = Enum.Font.ArimoBold
+            cLbl.TextXAlignment = Enum.TextXAlignment.Left
+            cLbl.TextWrapped = true
+            cLbl.LayoutOrder = j + 1
+            cLbl.Parent = entry
+        end
+
+        if i < #A_Changelog then
+            local divW = Instance.new("Frame")
+            divW.Size = UDim2.new(1, 0, 0, 2)
+            divW.BackgroundTransparency = 1
+            divW.LayoutOrder = i * 2 + 1
+            divW.Parent = scrollFrame
+            local div = Instance.new("Frame")
+            div.Size = UDim2.new(1, 0, 0, 2)
+            div.BackgroundColor3 = A_Theme.Divider
+            div.BorderSizePixel = 0
+            div.Parent = divW
+        end
+    end
+
+    local function toggle(changelogIcon, container, currentContainerWidth)
+        isOpen = not isOpen
+        if isOpen then
+            A_Tween:Create(panelStroke, TweenInfo.new(0.2), {Transparency = 0.4}):Play()
+            A_Tween:Create(panel, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, panelWidth, 0, panelHeight)}):Play()
+            A_Tween:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, currentContainerWidth + gap + panelWidth, 0, panelHeight)}):Play()
+            if changelogIcon then A_Tween:Create(changelogIcon, TweenInfo.new(0.3), {Rotation = 180}):Play() end
+        else
+            A_Tween:Create(panelStroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
+            A_Tween:Create(panel, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, panelHeight)}):Play()
+            A_Tween:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, currentContainerWidth, 0, panelHeight)}):Play()
+            if changelogIcon then A_Tween:Create(changelogIcon, TweenInfo.new(0.3), {Rotation = 0}):Play() end
+        end
+    end
+
+    panelClose.MouseButton1Click:Connect(function() if isOpen then toggle(nil, parent, windowWidth) end end)
+    return panel, toggle, function() return isOpen end, panelWidth
+end
+
+-- ===== USER INFO PANEL =====
+local function a_CreateUserInfoPanel(parent, windowWidth, panelHeight, panelWidth, mainFrame, gap, startOpen)
+    panelWidth = panelWidth or 180
+    local isOpen = startOpen or false
+    local isCompact = panelHeight < 300
+    local isMobPanel = a_isMobile()
+
+    local avatarSize  = (isMobPanel or not isCompact) and 52 or 42
+    local fieldHeight = (isMobPanel or not isCompact) and 27 or 24
+    local titleSize   = (isMobPanel or not isCompact) and 9  or 8
+    local valueSize   = (isMobPanel or not isCompact) and 11 or 10
+    local welcomeSize = (isMobPanel or not isCompact) and 12 or 11
+    local spacing     = (isMobPanel or not isCompact) and 5  or 3
+
+    local panel = Instance.new("Frame")
+    panel.Name = "UserInfoPanel"
+    panel.Size = UDim2.new(0, isOpen and panelWidth or 0, 0, panelHeight)
+    panel.Position = UDim2.new(0, -(gap), 0, 0)
+    panel.AnchorPoint = Vector2.new(1, 0)
+    panel.BackgroundColor3 = A_Theme.Background
+    panel.BorderSizePixel = 0
+    panel.ClipsDescendants = true
+    panel.Parent = mainFrame
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 4)
+
+    local panelStroke = Instance.new("UIStroke", panel)
+    panelStroke.Color = A_Theme.Accent
+    panelStroke.Thickness = 2
+    panelStroke.Transparency = isOpen and 0.4 or 1
+
+    local panelHeader = Instance.new("Frame")
+    panelHeader.Size = UDim2.new(1, 0, 0, 50)
+    panelHeader.BackgroundColor3 = A_Theme.Header
+    panelHeader.BorderSizePixel = 0
+    panelHeader.Parent = panel
+    Instance.new("UICorner", panelHeader).CornerRadius = UDim.new(0, 4)
+
+    local panelHeaderFix = Instance.new("Frame")
+    panelHeaderFix.Size = UDim2.new(1, 0, 0, 8)
+    panelHeaderFix.Position = UDim2.new(0, 0, 1, -8)
+    panelHeaderFix.BackgroundColor3 = A_Theme.Header
+    panelHeaderFix.BorderSizePixel = 0
+    panelHeaderFix.Parent = panelHeader
+
+    local panelHeaderLine = Instance.new("Frame")
+    panelHeaderLine.Size = UDim2.new(1, 0, 0, 1)
+    panelHeaderLine.Position = UDim2.new(0, 0, 1, 0)
+    panelHeaderLine.BackgroundColor3 = A_Theme.Accent
+    panelHeaderLine.BackgroundTransparency = 0.6
+    panelHeaderLine.BorderSizePixel = 0
+    panelHeaderLine.Parent = panelHeader
+
+    local panelHeaderIcon = Instance.new("ImageLabel")
+    panelHeaderIcon.Size = UDim2.new(0, 16, 0, 16)
+    panelHeaderIcon.Position = UDim2.new(0, 12, 0.5, 0)
+    panelHeaderIcon.AnchorPoint = Vector2.new(0, 0.5)
+    panelHeaderIcon.BackgroundTransparency = 1
+    panelHeaderIcon.Image = a_getIcon("user")
+    panelHeaderIcon.ImageColor3 = A_Theme.Accent
+    panelHeaderIcon.ScaleType = Enum.ScaleType.Fit
+    panelHeaderIcon.Parent = panelHeader
+
+    local panelTitle = Instance.new("TextLabel")
+    panelTitle.Size = UDim2.new(1, -65, 1, 0)
+    panelTitle.Position = UDim2.new(0, 34, 0, 0)
+    panelTitle.BackgroundTransparency = 1
+    panelTitle.Text = "User Info"
+    panelTitle.TextColor3 = A_Theme.Text
+    panelTitle.TextSize = 16
+    panelTitle.Font = Enum.Font.ArimoBold
+    panelTitle.TextXAlignment = Enum.TextXAlignment.Left
+    panelTitle.Parent = panelHeader
+
+    local panelClose = Instance.new("ImageButton")
+    panelClose.Size = UDim2.new(0, 20, 0, 20)
+    panelClose.Position = UDim2.new(1, -14, 0.5, 0)
+    panelClose.AnchorPoint = Vector2.new(1, 0.5)
+    panelClose.BackgroundTransparency = 1
+    panelClose.Image = a_getIcon("close")
+    panelClose.ImageColor3 = A_Theme.TextDim
+    panelClose.ScaleType = Enum.ScaleType.Fit
+    panelClose.Parent = panelHeader
+    panelClose.MouseEnter:Connect(function() A_Tween:Create(panelClose, TweenInfo.new(0.15), {ImageColor3 = A_Theme.Error}):Play() end)
+    panelClose.MouseLeave:Connect(function() A_Tween:Create(panelClose, TweenInfo.new(0.15), {ImageColor3 = A_Theme.TextDim}):Play() end)
+
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Size = UDim2.new(1, 0, 1, -55)
+    contentFrame.Position = UDim2.new(0, 0, 0, 55)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Parent = panel
+
+    local cp = Instance.new("UIPadding", contentFrame)
+    cp.PaddingLeft = UDim.new(0, 8)
+    cp.PaddingRight = UDim.new(0, 8)
+
+    local cLayout = Instance.new("UIListLayout", contentFrame)
+    cLayout.Padding = UDim.new(0, spacing)
+    cLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    cLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    cLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+
+    local player = A_LP
+
+    local avatarWrapper = Instance.new("Frame")
+    avatarWrapper.Size = UDim2.new(0, avatarSize + 6, 0, avatarSize + 6)
+    avatarWrapper.BackgroundTransparency = 1
+    avatarWrapper.LayoutOrder = 1
+    avatarWrapper.Parent = contentFrame
+
+    local avatarGlow = Instance.new("Frame")
+    avatarGlow.Size = UDim2.new(1, 0, 1, 0)
+    avatarGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
+    avatarGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+    avatarGlow.BackgroundColor3 = A_Theme.Accent
+    avatarGlow.BackgroundTransparency = 0.5
+    avatarGlow.BorderSizePixel = 0
+    avatarGlow.Parent = avatarWrapper
+    Instance.new("UICorner", avatarGlow).CornerRadius = UDim.new(0, 4)
+
+    local avatarGlowStroke = Instance.new("UIStroke", avatarGlow)
+    avatarGlowStroke.Color = A_Theme.Accent
+    avatarGlowStroke.Thickness = 1.5
+    avatarGlowStroke.Transparency = 0.3
+
+    local avatarContainer = Instance.new("Frame")
+    avatarContainer.Size = UDim2.new(0, avatarSize, 0, avatarSize)
+    avatarContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
+    avatarContainer.AnchorPoint = Vector2.new(0.5, 0.5)
+    avatarContainer.BackgroundColor3 = A_Theme.Input
+    avatarContainer.BorderSizePixel = 0
+    avatarContainer.ClipsDescendants = true
+    avatarContainer.Parent = avatarWrapper
+    Instance.new("UICorner", avatarContainer).CornerRadius = UDim.new(0, 4)
+
+    local avatarImage = Instance.new("ImageLabel")
+    avatarImage.Size = UDim2.new(1, 0, 1, 0)
+    avatarImage.Position = UDim2.new(0.5, 0, 0.5, 0)
+    avatarImage.AnchorPoint = Vector2.new(0.5, 0.5)
+    avatarImage.BackgroundTransparency = 1
+    avatarImage.ScaleType = Enum.ScaleType.Crop
+    avatarImage.Parent = avatarContainer
+    pcall(function()
+        local content = A_Players:GetUserThumbnailAsync(player and player.UserId or 0, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+        avatarImage.Image = content
+    end)
+
+    local welcomeLabel = Instance.new("TextLabel")
+    welcomeLabel.Size = UDim2.new(1, 0, 0, isCompact and 14 or 18)
+    welcomeLabel.BackgroundTransparency = 1
+    welcomeLabel.Text = "Welcome, " .. (player and player.DisplayName or "User")
+    welcomeLabel.TextColor3 = A_Theme.Text
+    welcomeLabel.TextSize = welcomeSize
+    welcomeLabel.Font = Enum.Font.ArimoBold
+    welcomeLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    welcomeLabel.LayoutOrder = 2
+    welcomeLabel.Parent = contentFrame
+
+    local divider1 = Instance.new("Frame")
+    divider1.Size = UDim2.new(1, 16, 0, 2)
+    divider1.Position = UDim2.new(0.5, 0, 0, 0)
+    divider1.AnchorPoint = Vector2.new(0.5, 0)
+    divider1.BackgroundColor3 = A_Theme.Divider
+    divider1.BorderSizePixel = 0
+    divider1.LayoutOrder = 3
+    divider1.Parent = contentFrame
+
+    local executorContainer = Instance.new("Frame")
+    executorContainer.Size = UDim2.new(1, 0, 0, fieldHeight)
+    executorContainer.BackgroundTransparency = 1
+    executorContainer.LayoutOrder = 4
+    executorContainer.Parent = contentFrame
+
+    local executorTitle = Instance.new("TextLabel")
+    executorTitle.Size = UDim2.new(1, 0, 0, 11)
+    executorTitle.BackgroundTransparency = 1
+    executorTitle.Text = "Executor"
+    executorTitle.TextColor3 = A_Theme.TextDim
+    executorTitle.TextSize = titleSize
+    executorTitle.Font = Enum.Font.ArimoBold
+    executorTitle.TextXAlignment = Enum.TextXAlignment.Left
+    executorTitle.Parent = executorContainer
+
+    local executorValue = Instance.new("TextLabel")
+    executorValue.Size = UDim2.new(1, 0, 0, 14)
+    executorValue.Position = UDim2.new(0, 0, 0, 11)
+    executorValue.BackgroundTransparency = 1
+    executorValue.Text = a_getExecutorName()
+    executorValue.TextColor3 = A_Theme.Accent
+    executorValue.TextSize = valueSize
+    executorValue.Font = Enum.Font.ArimoBold
+    executorValue.TextXAlignment = Enum.TextXAlignment.Left
+    executorValue.TextTruncate = Enum.TextTruncate.AtEnd
+    executorValue.Parent = executorContainer
+
+    local deviceContainer = Instance.new("Frame")
+    deviceContainer.Size = UDim2.new(1, 0, 0, fieldHeight)
+    deviceContainer.BackgroundTransparency = 1
+    deviceContainer.LayoutOrder = 5
+    deviceContainer.Parent = contentFrame
+
+    local deviceTitle = Instance.new("TextLabel")
+    deviceTitle.Size = UDim2.new(1, 0, 0, 11)
+    deviceTitle.BackgroundTransparency = 1
+    deviceTitle.Text = "Device"
+    deviceTitle.TextColor3 = A_Theme.TextDim
+    deviceTitle.TextSize = titleSize
+    deviceTitle.Font = Enum.Font.ArimoBold
+    deviceTitle.TextXAlignment = Enum.TextXAlignment.Left
+    deviceTitle.Parent = deviceContainer
+
+    local deviceValue = Instance.new("TextLabel")
+    deviceValue.Size = UDim2.new(1, 0, 0, 14)
+    deviceValue.Position = UDim2.new(0, 0, 0, 11)
+    deviceValue.BackgroundTransparency = 1
+    deviceValue.Text = a_getDeviceType()
+    deviceValue.TextColor3 = A_Theme.Accent
+    deviceValue.TextSize = valueSize
+    deviceValue.Font = Enum.Font.ArimoBold
+    deviceValue.TextXAlignment = Enum.TextXAlignment.Left
+    deviceValue.TextTruncate = Enum.TextTruncate.AtEnd
+    deviceValue.Parent = deviceContainer
+
+    local divider2 = Instance.new("Frame")
+    divider2.Size = UDim2.new(1, 16, 0, 2)
+    divider2.Position = UDim2.new(0.5, 0, 0, 0)
+    divider2.AnchorPoint = Vector2.new(0.5, 0)
+    divider2.BackgroundColor3 = A_Theme.Divider
+    divider2.BorderSizePixel = 0
+    divider2.LayoutOrder = 6
+    divider2.Parent = contentFrame
+
+    local hwidContainer = Instance.new("Frame")
+    hwidContainer.Size = UDim2.new(1, 0, 0, fieldHeight)
+    hwidContainer.BackgroundTransparency = 1
+    hwidContainer.LayoutOrder = 7
+    hwidContainer.Parent = contentFrame
+
+    local hwidTitle = Instance.new("TextLabel")
+    hwidTitle.Size = UDim2.new(1, 0, 0, 11)
+    hwidTitle.BackgroundTransparency = 1
+    hwidTitle.Text = "HWID"
+    hwidTitle.TextColor3 = A_Theme.TextDim
+    hwidTitle.TextSize = titleSize
+    hwidTitle.Font = Enum.Font.ArimoBold
+    hwidTitle.TextXAlignment = Enum.TextXAlignment.Left
+    hwidTitle.Parent = hwidContainer
+
+    local fullHWID = a_getHWID()
+    local copyBtnSize = 18
+    local dotAreaWidth = panelWidth - 16 - copyBtnSize - 6
+    local hiddenDots = a_generateHiddenDots(dotAreaWidth, 5)
+
+    local hwidValue = Instance.new("TextLabel")
+    hwidValue.Size = UDim2.new(1, -(copyBtnSize + 6), 0, 14)
+    hwidValue.Position = UDim2.new(0, 0, 0, 11)
+    hwidValue.BackgroundTransparency = 1
+    hwidValue.Text = hiddenDots
+    hwidValue.TextColor3 = A_Theme.TextDim
+    hwidValue.TextSize = isCompact and 9 or 10
+    hwidValue.Font = Enum.Font.ArimoBold
+    hwidValue.TextXAlignment = Enum.TextXAlignment.Left
+    hwidValue.TextTruncate = Enum.TextTruncate.AtEnd
+    hwidValue.Parent = hwidContainer
+
+    local copyBtn = Instance.new("ImageButton")
+    copyBtn.Size = UDim2.new(0, copyBtnSize, 0, copyBtnSize)
+    copyBtn.Position = UDim2.new(1, 0, 0.5, 1)
+    copyBtn.AnchorPoint = Vector2.new(1, 0.5)
+    copyBtn.BackgroundTransparency = 1
+    copyBtn.Image = a_getIcon("copy")
+    copyBtn.ImageColor3 = A_Theme.TextDim
+    copyBtn.ScaleType = Enum.ScaleType.Fit
+    copyBtn.Parent = hwidContainer
+    copyBtn.MouseEnter:Connect(function() A_Tween:Create(copyBtn, TweenInfo.new(0.15), {ImageColor3 = A_Theme.Accent}):Play() end)
+    copyBtn.MouseLeave:Connect(function() A_Tween:Create(copyBtn, TweenInfo.new(0.15), {ImageColor3 = A_Theme.TextDim}):Play() end)
+    copyBtn.MouseButton1Click:Connect(function()
+        pcall(function() setclipboard(fullHWID) end)
+        A_Tween:Create(copyBtn, TweenInfo.new(0.1), {ImageColor3 = A_Theme.Success}):Play()
+        task.delay(0.3, function() A_Tween:Create(copyBtn, TweenInfo.new(0.15), {ImageColor3 = A_Theme.TextDim}):Play() end)
+        a_Notify("Copied", "HWID copied to clipboard", 2, "copy")
+    end)
+
+    local divider3 = Instance.new("Frame")
+    divider3.Size = UDim2.new(1, 16, 0, 2)
+    divider3.Position = UDim2.new(0.5, 0, 0, 0)
+    divider3.AnchorPoint = Vector2.new(0.5, 0)
+    divider3.BackgroundColor3 = A_Theme.Divider
+    divider3.BorderSizePixel = 0
+    divider3.LayoutOrder = 8
+    divider3.Parent = contentFrame
+
+    local clockContainer = Instance.new("Frame")
+    clockContainer.Size = UDim2.new(1, 0, 0, isCompact and 30 or 38)
+    clockContainer.BackgroundTransparency = 1
+    clockContainer.LayoutOrder = 9
+    clockContainer.Parent = contentFrame
+
+    local clockRow = Instance.new("Frame")
+    clockRow.Size = UDim2.new(1, 0, 0, isCompact and 18 or 22)
+    clockRow.Position = UDim2.new(0.5, -8, 0, 0)
+    clockRow.AnchorPoint = Vector2.new(0.5, 0)
+    clockRow.BackgroundTransparency = 1
+    clockRow.Parent = clockContainer
+
+    local clockRowLayout = Instance.new("UIListLayout", clockRow)
+    clockRowLayout.FillDirection = Enum.FillDirection.Horizontal
+    clockRowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    clockRowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    clockRowLayout.Padding = UDim.new(0, isCompact and 4 or 6)
+
+    local clockIcon = Instance.new("ImageLabel")
+    clockIcon.Size = UDim2.new(0, isCompact and 14 or 16, 0, isCompact and 14 or 16)
+    clockIcon.BackgroundTransparency = 1
+    clockIcon.Image = a_getIcon("clock")
+    clockIcon.ImageColor3 = A_Theme.Accent
+    clockIcon.ScaleType = Enum.ScaleType.Fit
+    clockIcon.LayoutOrder = 1
+    clockIcon.Parent = clockRow
+
+    local clockTimeLabel = Instance.new("TextLabel")
+    clockTimeLabel.Size = UDim2.new(0, 0, 1, 0)
+    clockTimeLabel.AutomaticSize = Enum.AutomaticSize.X
+    clockTimeLabel.BackgroundTransparency = 1
+    clockTimeLabel.Text = a_formatTime12()
+    clockTimeLabel.TextColor3 = A_Theme.Accent
+    clockTimeLabel.TextSize = isCompact and 14 or 16
+    clockTimeLabel.Font = Enum.Font.ArimoBold
+    clockTimeLabel.LayoutOrder = 2
+    clockTimeLabel.Parent = clockRow
+
+    local clockDateLabel = Instance.new("TextLabel")
+    clockDateLabel.Size = UDim2.new(1, 0, 0, isCompact and 12 or 14)
+    clockDateLabel.Position = UDim2.new(0, -8, 0, isCompact and 18 or 22)
+    clockDateLabel.BackgroundTransparency = 1
+    clockDateLabel.Text = a_formatDate()
+    clockDateLabel.TextColor3 = A_Theme.TextDim
+    clockDateLabel.TextSize = isCompact and 9 or 11
+    clockDateLabel.Font = Enum.Font.ArimoBold
+    clockDateLabel.TextXAlignment = Enum.TextXAlignment.Center
+    clockDateLabel.Parent = clockContainer
+
+    local clockRunning = true
+    task.spawn(function()
+        while clockRunning do
+            if not clockTimeLabel or not clockTimeLabel.Parent then clockRunning = false break end
+            clockTimeLabel.Text = a_formatTime12()
+            clockDateLabel.Text = a_formatDate()
+            task.wait(1)
+        end
+    end)
+    panel.Destroying:Connect(function() clockRunning = false end)
+
+    local function toggle(userIcon, container, baseWidth)
+        isOpen = not isOpen
+        if isOpen then
+            A_Tween:Create(panelStroke, TweenInfo.new(0.2), {Transparency = 0.4}):Play()
+            A_Tween:Create(panel, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, panelWidth, 0, panelHeight)}):Play()
+            A_Tween:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, baseWidth + gap + panelWidth, 0, panelHeight)}):Play()
+        else
+            A_Tween:Create(panelStroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
+            A_Tween:Create(panel, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, panelHeight)}):Play()
+            A_Tween:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, baseWidth, 0, panelHeight)}):Play()
+        end
+    end
+
+    panelClose.MouseButton1Click:Connect(function() if isOpen then toggle(nil, parent, windowWidth) end end)
+    return panel, toggle, function() return isOpen end, panelWidth
+end
+
+-- ===== BUILD CENTERED UI =====
+local function a_BuildCenteredUI(windowWidth, windowHeight, panelHeight, userPanelWidth, changelogPanelWidth, gap, buildContent)
+    local gui = buildContent.gui
+
+    local container = Instance.new("Frame")
+    container.Name = "Container"
+    container.Size = UDim2.new(0, windowWidth, 0, panelHeight)
+    container.Position = UDim2.new(0.5, 0, 1.5, 0)
+    container.AnchorPoint = Vector2.new(0.5, 0.5)
+    container.BackgroundTransparency = 1
+    container.Parent = gui
+
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, windowWidth, 0, windowHeight)
+    mainFrame.Position = UDim2.new(0.5, 0, 0, 0)
+    mainFrame.AnchorPoint = Vector2.new(0.5, 0)
+    mainFrame.BackgroundColor3 = A_Theme.Background
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Parent = container
+    Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 4)
+
+    local mainStroke = Instance.new("UIStroke", mainFrame)
+    mainStroke.Color = A_Theme.Accent
+    mainStroke.Thickness = 2
+    mainStroke.Transparency = 0.4
+
+    local userPanel, toggleUserPanel, isUserOpen, userPanelActualWidth = a_CreateUserInfoPanel(container, windowWidth, panelHeight, userPanelWidth, mainFrame, gap, false)
+    local changelogPanel, toggleChangelog, isChangelogOpen, changelogPanelActualWidth = a_CreateChangelogPanel(container, windowWidth, panelHeight, changelogPanelWidth, mainFrame, gap)
+
+    local function getContainerWidth()
+        local w = windowWidth
+        if isUserOpen() then w = w + gap + userPanelActualWidth end
+        if isChangelogOpen() then w = w + gap + changelogPanelActualWidth end
+        return w
+    end
+
+    local function toggleUser(userIcon)
+        local currentW = getContainerWidth()
+        if isUserOpen() then
+            toggleUserPanel(userIcon, container, currentW - gap - userPanelActualWidth)
+        else
+            toggleUserPanel(userIcon, container, currentW)
+        end
+    end
+
+    local function toggleCL(changelogIcon)
+        local currentW = getContainerWidth()
+        if isChangelogOpen() then
+            toggleChangelog(changelogIcon, container, currentW - gap - changelogPanelActualWidth)
+        else
+            toggleChangelog(changelogIcon, container, currentW)
+        end
+    end
+
+    local function closeAllPanels(userIcon, changelogIcon, callback)
+        if isChangelogOpen() then toggleCL(changelogIcon) task.wait(0.35) end
+        if isUserOpen() then toggleUser(userIcon) task.wait(0.35) end
+        if callback then callback() end
+    end
+
+    return {
+        container = container,
+        mainFrame = mainFrame,
+        mainStroke = mainStroke,
+        toggleUser = toggleUser,
+        toggleCL = toggleCL,
+        isUserOpen = isUserOpen,
+        isChangelogOpen = isChangelogOpen,
+        closeAllPanels = closeAllPanels
+    }
+end
+
+-- ===== BUILD KEY UI (Arqel persis — TANPA auto-unlock) =====
+local function a_BuildKeyUI(onSuccess)
+    local existing = A_hui:FindFirstChild("VH_KeySystem")
+    if existing then existing:Destroy() end
+    local existing2 = A_hui:FindFirstChild("VH_KeylessSystem")
+    if existing2 then existing2:Destroy() end
+
+    a_enableBlur()
+
+    local mobile = a_isMobile()
+    local vp = A_WS.CurrentCamera and A_WS.CurrentCamera.ViewportSize or Vector2.new(1280, 720)
+
+    local padding = mobile and 8 or 14
+    local baseWindowHeight, windowWidth, windowHeight
+    local elementHeight, buttonHeight, statusHeight
+    local userPanelWidth, changelogPanelWidth, gap
+
+    if mobile then
+        windowWidth  = math.floor(math.clamp(vp.X * 0.64, 220, 270))
+        windowHeight = math.floor(math.clamp(vp.Y * 0.50, 240, 310))
+        baseWindowHeight = windowHeight
+        elementHeight = math.clamp(math.floor(vp.Y * 0.052), 32, 40)
+        buttonHeight  = math.clamp(math.floor(vp.Y * 0.043), 28, 34)
+        statusHeight  = math.clamp(math.floor(vp.Y * 0.056), 34, 44)
+        userPanelWidth      = math.clamp(math.floor(vp.X * 0.32), 100, 130)
+        changelogPanelWidth = math.clamp(math.floor(vp.X * 0.38), 110, 150)
+        gap = 6
+    else
+        baseWindowHeight = 360
+        windowWidth  = 400
+        windowHeight = 360
+        elementHeight = 56
+        buttonHeight  = 42
+        statusHeight  = 60
+        userPanelWidth      = 180
+        changelogPanelWidth = 220
+        gap = 12
+    end
+
+    local function getAvailableSideSpace()
+        return math.max(0, (vp.X - windowWidth) / 2 - 6)
+    end
+    if mobile then
+        local sideSpace = getAvailableSideSpace()
+        if sideSpace < 60 then
+            userPanelWidth = 0
+            changelogPanelWidth = 0
+        elseif sideSpace < 140 then
+            userPanelWidth      = math.clamp(sideSpace - 8, 110, 160)
+            changelogPanelWidth = 0
+        else
+            userPanelWidth      = math.clamp(sideSpace * 0.46, 130, 180)
+            changelogPanelWidth = math.clamp(sideSpace * 0.54, 150, 200)
+        end
+    end
+
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "VH_KeySystem"
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true
+    screenGui.Parent = A_hui
+
+    local ui = a_BuildCenteredUI(windowWidth, windowHeight, baseWindowHeight, userPanelWidth, changelogPanelWidth, gap, {gui = screenGui})
+    local container = ui.container
+    local mainFrame = ui.mainFrame
+    local mainStroke = ui.mainStroke
+
+    local header = Instance.new("Frame")
+    header.Size = UDim2.new(1, 0, 0, 50)
+    header.BackgroundColor3 = A_Theme.Header
+    header.BorderSizePixel = 0
+    header.Active = true
+    header.Parent = mainFrame
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 4)
+
+    local headerFix = Instance.new("Frame")
+    headerFix.Size = UDim2.new(1, 0, 0, 6)
+    headerFix.Position = UDim2.new(0, 0, 1, -6)
+    headerFix.BackgroundColor3 = A_Theme.Header
+    headerFix.BorderSizePixel = 0
+    headerFix.Parent = header
+
+    local headerLine = Instance.new("Frame")
+    headerLine.Size = UDim2.new(1, 0, 0, 1)
+    headerLine.Position = UDim2.new(0, 0, 1, 0)
+    headerLine.BackgroundColor3 = A_Theme.Accent
+    headerLine.BackgroundTransparency = 0.6
+    headerLine.BorderSizePixel = 0
+    headerLine.Parent = header
+
+    local logoHolder = Instance.new("Frame")
+    logoHolder.Name = "VHLogoHeader"
+    local _logoHdr = mobile and math.clamp(math.floor(windowWidth * 0.078), 22, 28) or 30
+    logoHolder.Size = UDim2.fromOffset(_logoHdr, _logoHdr)
+    logoHolder.Position = UDim2.new(0, padding, 0.5, 0)
+    logoHolder.AnchorPoint = Vector2.new(0, 0.5)
+    logoHolder.BackgroundColor3 = A_Theme.Background
+    logoHolder.BackgroundTransparency = 0.15
+    logoHolder.BorderSizePixel = 0
+    logoHolder.ClipsDescendants = true
+    logoHolder.Parent = header
+
+    local lhCorner = Instance.new("UICorner")
+    lhCorner.CornerRadius = UDim.new(0, 6)
+    lhCorner.Parent = logoHolder
+
+    local lhStroke = Instance.new("UIStroke")
+    lhStroke.Color = A_Theme.Accent
+    lhStroke.Thickness = 1.5
+    lhStroke.Transparency = 0.2
+    lhStroke.Parent = logoHolder
+
+    local lhShadow = Instance.new("TextLabel")
+    lhShadow.Size = UDim2.fromScale(1, 1)
+    lhShadow.Position = UDim2.fromOffset(1, 2)
+    lhShadow.BackgroundTransparency = 1
+    lhShadow.Text = "VH"
+    lhShadow.TextColor3 = Color3.fromRGB(0, 0, 0)
+    lhShadow.TextTransparency = 0.05
+    lhShadow.Font = Enum.Font.GothamBlack
+    lhShadow.TextSize = 14
+    lhShadow.ZIndex = 12
+    lhShadow.Parent = logoHolder
+
+    local lhDepth = Instance.new("TextLabel")
+    lhDepth.Size = UDim2.fromScale(1, 1)
+    lhDepth.Position = UDim2.fromOffset(1, 1)
+    lhDepth.BackgroundTransparency = 1
+    lhDepth.Text = "VH"
+    lhDepth.TextColor3 = A_Theme.Accent
+    lhDepth.Font = Enum.Font.GothamBlack
+    lhDepth.TextSize = 14
+    lhDepth.ZIndex = 13
+    lhDepth.Parent = logoHolder
+
+    local lhFace = Instance.new("TextLabel")
+    lhFace.Size = UDim2.fromScale(1, 1)
+    lhFace.BackgroundTransparency = 1
+    lhFace.Text = "VH"
+    lhFace.TextColor3 = A_Theme.Text
+    lhFace.Font = Enum.Font.GothamBlack
+    lhFace.TextSize = 14
+    lhFace.TextStrokeColor3 = A_Theme.Accent
+    lhFace.TextStrokeTransparency = 0
+    lhFace.ZIndex = 14
+    lhFace.Parent = logoHolder
+
+    local lhLightningHolder = Instance.new("Frame")
+    lhLightningHolder.Size = UDim2.fromScale(1, 1)
+    lhLightningHolder.BackgroundTransparency = 1
+    lhLightningHolder.ClipsDescendants = true
+    lhLightningHolder.ZIndex = 15
+    lhLightningHolder.Parent = logoHolder
+
+    local lightningSegments = {
+        {0.20, 0.15, 10, -30},
+        {0.78, 0.30, 9, 35},
+        {0.15, 0.55, 11, -25},
+        {0.82, 0.70, 8, 30},
+    }
+
+    local lhBolts = {}
+    for _, seg in ipairs(lightningSegments) do
+        local bolt = Instance.new("Frame")
+        bolt.AnchorPoint = Vector2.new(0.5, 0.5)
+        bolt.Size = UDim2.fromOffset(1.5, seg[3])
+        bolt.Position = UDim2.fromScale(seg[1], seg[2])
+        bolt.Rotation = seg[4]
+        bolt.BackgroundColor3 = Color3.fromRGB(170, 220, 255)
+        bolt.BackgroundTransparency = 1
+        bolt.BorderSizePixel = 0
+        bolt.ZIndex = 16
+        bolt.Parent = lhLightningHolder
+        local bc = Instance.new("UICorner")
+        bc.CornerRadius = UDim.new(1, 0)
+        bc.Parent = bolt
+        table.insert(lhBolts, bolt)
+    end
+
+    task.spawn(function()
+        while logoHolder.Parent do
+            task.wait(math.random(15, 35) / 10)
+            if not logoHolder.Parent then break end
+            for _, bolt in ipairs(lhBolts) do
+                bolt.BackgroundTransparency = 0
+                task.wait(0.05)
+                bolt.BackgroundTransparency = 1
+            end
+            task.wait(0.08)
+            for _, bolt in ipairs(lhBolts) do
+                bolt.BackgroundTransparency = 0
+                task.wait(0.03)
+                bolt.BackgroundTransparency = 1
+            end
+        end
+    end)
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -70, 1, 0)
+    titleLabel.Position = UDim2.new(0, padding + A_Appearance.IconSize.X.Offset + 10, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = A_Appearance.Title
+    titleLabel.TextColor3 = A_Theme.Text
+    titleLabel.TextSize = mobile and math.clamp(math.floor(windowWidth * 0.048), 14, 17) or 26
+    titleLabel.Font = Enum.Font.ArimoBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = header
+
+    local closeBtn = Instance.new("ImageButton")
+    local _clSz = mobile and math.clamp(math.floor(windowWidth * 0.06), 16, 22) or 22
+    closeBtn.Size = UDim2.fromOffset(_clSz, _clSz)
+    closeBtn.Position = UDim2.new(1, -padding, 0.5, 0)
+    closeBtn.AnchorPoint = Vector2.new(1, 0.5)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.Image = a_getIcon("close")
+    closeBtn.ImageColor3 = A_Theme.TextDim
+    closeBtn.ScaleType = Enum.ScaleType.Fit
+    closeBtn.Parent = header
+    closeBtn.MouseEnter:Connect(function() A_Tween:Create(closeBtn, TweenInfo.new(0.15), {ImageColor3 = A_Theme.Error}):Play() end)
+    closeBtn.MouseLeave:Connect(function() A_Tween:Create(closeBtn, TweenInfo.new(0.15), {ImageColor3 = A_Theme.TextDim}):Play() end)
+
+    local contentStartY = mobile and math.clamp(math.floor(windowWidth * 0.16), 42, 52) or 60
+
     local statusFrame = Instance.new("Frame")
-    statusFrame.Size = UDim2.new(1, -24, 0, isMobile and 52 or 60)
-    statusFrame.Position = UDim2.new(0.5, 0, 0, 62)
+    statusFrame.Size = UDim2.new(0.94, 0, 0, statusHeight)
+    statusFrame.Position = UDim2.new(0.5, 0, 0, contentStartY)
     statusFrame.AnchorPoint = Vector2.new(0.5, 0)
-    statusFrame.BackgroundColor3 = Theme.Input
+    statusFrame.BackgroundColor3 = A_Theme.Input
     statusFrame.BorderSizePixel = 0
     statusFrame.ClipsDescendants = true
-    statusFrame.Parent = main
-    Instance.new("UICorner", statusFrame).CornerRadius = UDim.new(0, 8)
-    local statusStroke = Instance.new("UIStroke", statusFrame)
-    statusStroke.Color = Theme.Accent
-    statusStroke.Thickness = 1
-    statusStroke.Transparency = 0.7
+    statusFrame.Parent = mainFrame
+    Instance.new("UICorner", statusFrame).CornerRadius = UDim.new(0, 4)
 
-    local statusIcon = Instance.new("TextLabel")
-    statusIcon.Size = UDim2.fromOffset(32, 32)
-    statusIcon.Position = UDim2.new(0, 12, 0.5, 0)
+    local statusStroke = Instance.new("UIStroke", statusFrame)
+    statusStroke.Color = A_Theme.Accent
+    statusStroke.Thickness = 1
+    statusStroke.Transparency = 0.8
+
+    local statusIcon = Instance.new("ImageLabel")
+    local _stIco = mobile and math.clamp(math.floor(windowWidth * 0.065), 16, 22) or 24
+    statusIcon.Size = UDim2.fromOffset(_stIco, _stIco)
+    statusIcon.Position = UDim2.new(0, mobile and 10 or 16, 0.5, 0)
     statusIcon.AnchorPoint = Vector2.new(0, 0.5)
-    statusIcon.BackgroundColor3 = Theme.Divider
-    statusIcon.Text = "🔒"
-    statusIcon.TextSize = 15
-    statusIcon.Font = Enum.Font.GothamBold
+    statusIcon.BackgroundTransparency = 1
+    statusIcon.Image = a_getIcon("lock")
+    statusIcon.ImageColor3 = A_Theme.StatusIdle
+    statusIcon.ScaleType = Enum.ScaleType.Fit
     statusIcon.Parent = statusFrame
-    Instance.new("UICorner", statusIcon).CornerRadius = UDim.new(1, 0)
 
     local statusLabel = Instance.new("TextLabel")
     statusLabel.Size = UDim2.new(1, -60, 1, 0)
-    statusLabel.Position = UDim2.fromOffset(56, 0)
+    statusLabel.Position = UDim2.new(0, mobile and (_stIco + 16) or 52, 0, 0)
     statusLabel.BackgroundTransparency = 1
-    statusLabel.Text = "Enter your key to unlock"
-    statusLabel.TextColor3 = Theme.TextDim
-    statusLabel.Font = Enum.Font.GothamSemibold
-    statusLabel.TextSize = isMobile and 11 or 13
+    statusLabel.Text = A_Appearance.Subtitle
+    statusLabel.TextColor3 = A_Theme.StatusIdle
+    statusLabel.TextSize = mobile and math.clamp(math.floor(windowWidth * 0.034), 10, 13) or 18
+    statusLabel.Font = Enum.Font.ArimoBold
     statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-    statusLabel.TextWrapped = true
     statusLabel.TextTruncate = Enum.TextTruncate.AtEnd
     statusLabel.Parent = statusFrame
 
-    -- Input
+    local inputStartY = contentStartY + statusHeight + 10
+
     local inputFrame = Instance.new("Frame")
-    inputFrame.Size = UDim2.new(1, -24, 0, isMobile and 42 or 46)
-    inputFrame.Position = UDim2.new(0.5, 0, 0, 62 + (isMobile and 60 or 68))
+    inputFrame.Size = UDim2.new(0.94, 0, 0, elementHeight)
+    inputFrame.Position = UDim2.new(0.5, 0, 0, inputStartY)
     inputFrame.AnchorPoint = Vector2.new(0.5, 0)
-    inputFrame.BackgroundColor3 = Theme.Input
+    inputFrame.BackgroundColor3 = A_Theme.Input
     inputFrame.BorderSizePixel = 0
     inputFrame.ClipsDescendants = true
-    inputFrame.Parent = main
-    Instance.new("UICorner", inputFrame).CornerRadius = UDim.new(0, 8)
+    inputFrame.Parent = mainFrame
+    Instance.new("UICorner", inputFrame).CornerRadius = UDim.new(0, 4)
+
     local inputStroke = Instance.new("UIStroke", inputFrame)
-    inputStroke.Color = Theme.Accent
+    inputStroke.Color = A_Theme.Accent
     inputStroke.Thickness = 1
-    inputStroke.Transparency = 0.5
+    inputStroke.Transparency = 0.7
 
     local textBox = Instance.new("TextBox")
     textBox.Size = UDim2.new(1, -24, 1, 0)
-    textBox.Position = UDim2.new(0.5, 0, 0.5, 0)
-    textBox.AnchorPoint = Vector2.new(0.5, 0.5)
+    textBox.Position = UDim2.new(0, 12, 0.5, 0)
+    textBox.AnchorPoint = Vector2.new(0, 0.5)
     textBox.BackgroundTransparency = 1
     textBox.Text = ""
-    textBox.TextColor3 = Theme.Text
-    textBox.PlaceholderText = "Paste your key here..."
-    textBox.PlaceholderColor3 = Theme.TextDim
-    textBox.TextSize = isMobile and 12 or 14
-    textBox.Font = Enum.Font.GothamSemibold
+    textBox.TextColor3 = A_Theme.Text
+    textBox.PlaceholderText = "Enter your key..."
+    textBox.PlaceholderColor3 = A_Theme.TextDim
+    textBox.TextSize = mobile and math.clamp(math.floor(windowWidth * 0.036), 10, 13) or 18
+    textBox.Font = Enum.Font.ArimoBold
     textBox.ClearTextOnFocus = false
     textBox.TextTruncate = Enum.TextTruncate.AtEnd
     textBox.TextXAlignment = Enum.TextXAlignment.Left
     textBox.Parent = inputFrame
-    textBox.Focused:Connect(function() TweenService:Create(inputStroke, TweenInfo.new(0.15), { Transparency = 0.2 }):Play() end)
-    textBox.FocusLost:Connect(function() TweenService:Create(inputStroke, TweenInfo.new(0.15), { Transparency = 0.5 }):Play() end)
+    textBox.Focused:Connect(function() A_Tween:Create(inputStroke, TweenInfo.new(0.15), {Transparency = 0.3}):Play() end)
+    textBox.FocusLost:Connect(function() A_Tween:Create(inputStroke, TweenInfo.new(0.15), {Transparency = 0.7}):Play() end)
 
-    -- Buttons
-    local btnY = 62 + (isMobile and 60 or 68) + (isMobile and 42 or 46) + 14
+    local dividerY = inputStartY + elementHeight + 12
 
-    local function makeBtn(text, primary, y)
+    local dividerLine = Instance.new("Frame")
+    dividerLine.Size = UDim2.new(1, 0, 0, 3)
+    dividerLine.Position = UDim2.new(0, 0, 0, dividerY)
+    dividerLine.BackgroundColor3 = A_Theme.Divider
+    dividerLine.BorderSizePixel = 0
+    dividerLine.Parent = mainFrame
+
+    local acquireStartY = dividerY + 15
+
+    local function createButton(text, iconKey, isPrimary, yPos)
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0.5, -18, 0, isMobile and 38 or 42)
-        btn.Position = UDim2.new(primary and 0.5 or 0, primary and 6 or 12, 0, y)
-        btn.AnchorPoint = primary and Vector2.new(0.5, 0) or Vector2.new(0, 0)
-        btn.BackgroundColor3 = primary and Theme.Accent or Theme.Input
-        btn.Text = text
-        btn.TextColor3 = primary and Theme.Background or Theme.Text
-        btn.Font = Enum.Font.GothamBold
-        btn.TextSize = isMobile and 11 or 13
+        btn.Size = UDim2.new(0.75, 0, 0, buttonHeight)
+        btn.Position = UDim2.new(0.5, 0, 0, yPos)
+        btn.AnchorPoint = Vector2.new(0.5, 0)
+        btn.BackgroundColor3 = isPrimary and A_Theme.Accent or A_Theme.Input
         btn.BorderSizePixel = 0
+        btn.Text = ""
         btn.AutoButtonColor = false
-        btn.Parent = main
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-        local s = Instance.new("UIStroke", btn)
-        s.Color = primary and Theme.AccentHover or Theme.Divider
-        s.Thickness = 1
-        s.Transparency = primary and 0.4 or 0.6
-        btn.MouseEnter:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.15), {
-                BackgroundColor3 = primary and Theme.AccentHover or Theme.Divider,
-            }):Play()
-        end)
-        btn.MouseLeave:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.15), {
-                BackgroundColor3 = primary and Theme.Accent or Theme.Input,
-            }):Play()
-        end)
+        btn.Parent = mainFrame
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+        local btnStroke = Instance.new("UIStroke", btn)
+        btnStroke.Color = isPrimary and A_Theme.AccentHover or A_Theme.Accent
+        btnStroke.Thickness = 1
+        btnStroke.Transparency = isPrimary and 0.5 or 0.7
+
+        local content = Instance.new("Frame")
+        content.Size = UDim2.new(1, 0, 1, 0)
+        content.BackgroundTransparency = 1
+        content.Parent = btn
+
+        local layout = Instance.new("UIListLayout", content)
+        layout.FillDirection = Enum.FillDirection.Horizontal
+        layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        layout.VerticalAlignment = Enum.VerticalAlignment.Center
+        layout.Padding = UDim.new(0, 8)
+
+        local iconImg = Instance.new("ImageLabel")
+        local _btnIco = mobile and math.clamp(math.floor(windowWidth * 0.038), 11, 15) or 18
+        iconImg.Size = UDim2.fromOffset(_btnIco, _btnIco)
+        iconImg.BackgroundTransparency = 1
+        iconImg.Image = a_getIcon(iconKey)
+        iconImg.ImageColor3 = A_Theme.Text
+        iconImg.ScaleType = Enum.ScaleType.Fit
+        iconImg.LayoutOrder = 1
+        iconImg.Parent = content
+
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0, 0, 0, 20)
+        label.AutomaticSize = Enum.AutomaticSize.X
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.TextColor3 = A_Theme.Text
+        label.TextSize = mobile and math.clamp(math.floor(windowWidth * 0.032), 10, 12) or 15
+        label.Font = Enum.Font.ArimoBold
+        label.LayoutOrder = 2
+        label.Parent = content
+
+        local origColor = btn.BackgroundColor3
+        local hoverColor = isPrimary and A_Theme.AccentHover or A_Theme.Accent
+        btn.MouseEnter:Connect(function() A_Tween:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = hoverColor}):Play() end)
+        btn.MouseLeave:Connect(function() A_Tween:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = origColor}):Play() end)
         return btn
     end
 
-    local getKeyBtn = makeBtn("Get Key", false, btnY)
-    local redeemBtn = makeBtn("Redeem Key", true, btnY)
+    local acquireBtn = createButton("Get Key", "key", false, acquireStartY)
+    local redeemBtn = createButton("Redeem Key", "shield", true, acquireStartY + buttonHeight + 5)
+    local bottomY = acquireStartY + buttonHeight * 2 + 10
 
-    -- Discord button (kecil di bawah)
+    local iconBtnSize = mobile and math.clamp(math.floor(windowWidth * 0.075), 22, 28) or 36
+    local iconBtnGap  = mobile and math.clamp(math.floor(windowWidth * 0.022), 5, 9) or 8
+
+    local userBtn = Instance.new("TextButton")
+    userBtn.Size = UDim2.fromOffset(iconBtnSize, iconBtnSize)
+    userBtn.Position = UDim2.new(0.5, -(iconBtnSize + iconBtnGap), 0, bottomY)
+    userBtn.AnchorPoint = Vector2.new(0.5, 0)
+    userBtn.BackgroundColor3 = A_Theme.Background
+    userBtn.BorderSizePixel = 0
+    userBtn.Text = ""
+    userBtn.AutoButtonColor = false
+    userBtn.Parent = mainFrame
+    Instance.new("UICorner", userBtn).CornerRadius = UDim.new(0, 4)
+
+    local userIcon = Instance.new("ImageLabel")
+    userIcon.Size = UDim2.fromOffset(iconBtnSize * 0.5, iconBtnSize * 0.5)
+    userIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+    userIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+    userIcon.BackgroundTransparency = 1
+    userIcon.Image = a_getIcon("user")
+    userIcon.ImageColor3 = A_Theme.TextDim
+    userIcon.ScaleType = Enum.ScaleType.Fit
+    userIcon.Parent = userBtn
+    userBtn.MouseEnter:Connect(function() A_Tween:Create(userIcon, TweenInfo.new(0.15), {ImageColor3 = A_Theme.Accent}):Play() end)
+    userBtn.MouseLeave:Connect(function() A_Tween:Create(userIcon, TweenInfo.new(0.15), {ImageColor3 = A_Theme.TextDim}):Play() end)
+
     local discordBtn = Instance.new("TextButton")
-    discordBtn.Size = UDim2.new(0.5, -18, 0, 28)
-    discordBtn.Position = UDim2.new(0.5, 0, 0, btnY + (isMobile and 46 or 50))
+    discordBtn.Size = UDim2.fromOffset(iconBtnSize, iconBtnSize)
+    discordBtn.Position = UDim2.new(0.5, 0, 0, bottomY)
     discordBtn.AnchorPoint = Vector2.new(0.5, 0)
-    discordBtn.BackgroundTransparency = 1
-    discordBtn.Text = "💬 Join Discord"
-    discordBtn.TextColor3 = Theme.Accent
-    discordBtn.Font = Enum.Font.GothamBold
-    discordBtn.TextSize = isMobile and 10 or 11
-    discordBtn.Parent = main
-    discordBtn.MouseButton1Click:Connect(function()
-        pcall(setclipboard, DiscordLink)
-        statusLabel.Text = "Discord link copied!"
-        statusLabel.TextColor3 = Theme.Success
-        task.delay(2, function()
-            if statusLabel and statusLabel.Parent then
-                statusLabel.Text = "Enter your key to unlock"
-                statusLabel.TextColor3 = Theme.TextDim
-            end
+    discordBtn.BackgroundColor3 = A_Theme.Background
+    discordBtn.BorderSizePixel = 0
+    discordBtn.Text = ""
+    discordBtn.AutoButtonColor = false
+    discordBtn.Parent = mainFrame
+    Instance.new("UICorner", discordBtn).CornerRadius = UDim.new(0, 4)
+
+    local discordIcon = Instance.new("ImageLabel")
+    discordIcon.Size = UDim2.fromOffset(iconBtnSize * 0.5, iconBtnSize * 0.5)
+    discordIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+    discordIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+    discordIcon.BackgroundTransparency = 1
+    discordIcon.Image = a_getIcon("discord")
+    discordIcon.ImageColor3 = A_Theme.Discord
+    discordIcon.ScaleType = Enum.ScaleType.Fit
+    discordIcon.Parent = discordBtn
+    discordBtn.MouseEnter:Connect(function() A_Tween:Create(discordIcon, TweenInfo.new(0.15), {ImageColor3 = A_Theme.DiscordHover}):Play() end)
+    discordBtn.MouseLeave:Connect(function() A_Tween:Create(discordIcon, TweenInfo.new(0.15), {ImageColor3 = A_Theme.Discord}):Play() end)
+
+    local changelogBtn = Instance.new("TextButton")
+    changelogBtn.Size = UDim2.fromOffset(iconBtnSize, iconBtnSize)
+    changelogBtn.Position = UDim2.new(0.5, iconBtnSize + iconBtnGap, 0, bottomY)
+    changelogBtn.AnchorPoint = Vector2.new(0.5, 0)
+    changelogBtn.BackgroundColor3 = A_Theme.Background
+    changelogBtn.BorderSizePixel = 0
+    changelogBtn.Text = ""
+    changelogBtn.AutoButtonColor = false
+    changelogBtn.Parent = mainFrame
+    Instance.new("UICorner", changelogBtn).CornerRadius = UDim.new(0, 4)
+
+    local changelogIcon = Instance.new("ImageLabel")
+    changelogIcon.Size = UDim2.fromOffset(iconBtnSize * 0.5, iconBtnSize * 0.5)
+    changelogIcon.Position = UDim2.new(0.5, 0, 0.5, 0)
+    changelogIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+    changelogIcon.BackgroundTransparency = 1
+    changelogIcon.Image = a_getIcon("changelog")
+    changelogIcon.ImageColor3 = A_Theme.TextDim
+    changelogIcon.ScaleType = Enum.ScaleType.Fit
+    changelogIcon.Parent = changelogBtn
+    changelogBtn.MouseEnter:Connect(function() A_Tween:Create(changelogIcon, TweenInfo.new(0.15), {ImageColor3 = A_Theme.Text}):Play() end)
+    changelogBtn.MouseLeave:Connect(function() A_Tween:Create(changelogIcon, TweenInfo.new(0.15), {ImageColor3 = A_Theme.TextDim}):Play() end)
+
+    if #A_Changelog == 0 then
+        changelogBtn.Visible = false
+        userBtn.Position = UDim2.new(0.5, -22, 0, bottomY)
+        discordBtn.Position = UDim2.new(0.5, 22, 0, bottomY)
+    end
+
+    local doors = a_CreateDoorOverlay(mainFrame, windowWidth, windowHeight)
+
+    userBtn.MouseButton1Click:Connect(function() ui.toggleUser(userIcon) end)
+    changelogBtn.MouseButton1Click:Connect(function() ui.toggleCL(changelogIcon) end)
+
+    local spinConnection, dotsThread
+
+    local function setStatus(state, customText)
+        if spinConnection then spinConnection:Disconnect() spinConnection = nil statusIcon.Rotation = 0 end
+        if dotsThread then task.cancel(dotsThread) dotsThread = nil end
+        local color, icon, text = A_Theme.StatusIdle, a_getIcon("lock"), customText or "No key detected"
+        if state == "verifying" then
+            color, icon, text = A_Theme.Accent, a_getIcon("loading"), "Verifying key"
+            spinConnection = A_Run.Heartbeat:Connect(function(dt)
+                if statusIcon and statusIcon.Parent then statusIcon.Rotation = (statusIcon.Rotation + dt * 360) % 360
+                else if spinConnection then spinConnection:Disconnect() end end
+            end)
+            local dots, i = {".", "..", "...", ""}, 1
+            dotsThread = task.spawn(function()
+                while statusLabel and statusLabel.Parent and statusLabel.Text:find("Verifying", 1, true) do
+                    statusLabel.Text = text .. dots[i] i = (i % #dots) + 1 task.wait(0.4)
+                end
+            end)
+        elseif state == "success" then color, icon, text = A_Theme.Success, a_getIcon("check"), customText or "Access Granted"
+        elseif state == "error" then color, icon, text = A_Theme.Error, a_getIcon("alert"), customText or "Invalid Key" end
+        A_Tween:Create(statusLabel, TweenInfo.new(0.3), {TextColor3 = color}):Play()
+        A_Tween:Create(statusIcon, TweenInfo.new(0.3), {ImageColor3 = color}):Play()
+        statusLabel.Text = text statusIcon.Image = icon
+    end
+
+    local function closeDoorsThenExit(callback)
+        ui.closeAllPanels(userIcon, changelogIcon, function()
+            doors.close(function() task.wait(0.3) if callback then callback() end end)
+        end)
+    end
+
+    closeBtn.MouseButton1Click:Connect(function()
+        a_Notify("Goodbye", "See you next time!", 2, "close")
+        closeDoorsThenExit(function()
+            a_disableBlur()
+            A_Tween:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, 0, -0.5, 0)}):Play()
+            A_Tween:Create(mainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+            task.wait(0.4)
+            screenGui:Destroy()
         end)
     end)
 
-    -- Dragging
-    local dragging, dragStart, startPos
-    header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = main.Position
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch) then
-            local d = input.Position - dragStart
-            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-
-    -- Set status helper
-    local spinning = nil
-    local function setStatus(state, customText)
-        if spinning then
-            pcall(function() spinning:Disconnect() end)
-            spinning = nil
-            statusIcon.Rotation = 0
-        end
-        local color, icon, text
-        if state == "verifying" then
-            color, icon, text = Theme.Accent, "⏳", customText or "Verifying key..."
-            spinning = game:GetService("RunService").Heartbeat:Connect(function(dt)
-                if statusIcon and statusIcon.Parent then
-                    statusIcon.Rotation = (statusIcon.Rotation + dt * 360) % 360
-                end
-            end)
-        elseif state == "success" then
-            color, icon, text = Theme.Success, "✅", customText or "Access Granted!"
-        elseif state == "error" then
-            color, icon, text = Theme.Error, "❌", customText or "Invalid Key"
-        else
-            color, icon, text = Theme.TextDim, "🔒", customText or "Enter your key to unlock"
-        end
-        TweenService:Create(statusLabel, TweenInfo.new(0.25), { TextColor3 = color }):Play()
-        statusLabel.Text = text
-        statusIcon.Text = icon
-    end
-
-    -- Redeem handler
-    local function doRedeem()
+    -- ============================================================
+    -- HANDLE REDEEM — LOGIC VRILZHUB (verifyKeyWithServer)
+    -- ============================================================
+    local function handleRedeem()
         local key = textBox.Text:gsub("%s+", "")
-        if key == "" then
-            setStatus("error", "Please enter a key first")
-            return
-        end
+        if key == "" then a_Notify("Error", "Please enter your key", 3, "warning") return end
+
         setStatus("verifying")
         redeemBtn.Active = false
-        task.wait(0.15)
+        task.wait(0.3)
+
         local valid, message, data = verifyKeyWithServer(key)
+
         redeemBtn.Active = true
+
         if valid then
             applyKeyInfo(data, key)
             saveKey(key)
-            setStatus("success", "Access Granted! Loading hub...")
-            _G.VRILZ_KEY_VALIDATED = true
-            _G.VRILZ_KeyValidated = true
-            task.wait(0.8)
-            -- Fade out & blur off
-            TweenService:Create(blur, TweenInfo.new(0.4), { Size = 0 }):Play()
-            TweenService:Create(main, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-                Position = UDim2.fromScale(0.5, 1.5),
-            }):Play()
-            task.wait(0.5)
-            if blur then blur:Destroy() end
-            gui:Destroy()
-            -- Script asli lanjut karena gate di atas sudah lolos
-            do return end
+            setStatus("success", "Access Granted")
+            a_Notify("Success", "Key validated successfully!", 2, "success")
+            task.wait(1)
+
+            closeDoorsThenExit(function()
+                a_disableBlur()
+                A_Tween:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, 0, -0.5, 0)}):Play()
+                A_Tween:Create(mainFrame, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
+                task.wait(0.4)
+                screenGui:Destroy()
+                if onSuccess then onSuccess() end
+            end)
         else
             setStatus("error", message or "Invalid key")
+            a_Notify("Invalid", message or "Invalid key", 4, "error")
         end
     end
 
-    redeemBtn.MouseButton1Click:Connect(doRedeem)
-    textBox.FocusLost:Connect(function(enter) if enter then doRedeem() end end)
+    redeemBtn.MouseButton1Click:Connect(handleRedeem)
 
-    getKeyBtn.MouseButton1Click:Connect(function()
-        pcall(setclipboard, KEY_SYSTEM_URL)
-        setStatus("verifying", "Key site link copied! Open in browser")
-        task.wait(1.5)
-        if statusLabel and statusLabel.Parent then
-            setStatus("idle")
+    acquireBtn.MouseButton1Click:Connect(function()
+        if A_Links.GetKey ~= "" then
+            a_Notify("Copied", "Key link copied!", 3, "copy")
+            pcall(function() setclipboard(A_Links.GetKey) end)
+        else
+            a_Notify("Error", "No key link set", 3, "warning")
         end
     end)
 
-    -- Slide in
-    TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.fromScale(0.5, 0.5),
-    }):Play()
-
-    -- Script TIDAK lanjut — return dari blok do
-    -- Kalau user tutup tanpa valid, UI hilang dan script berhenti di sini
-    -- (script asli tidak akan dieksekusi sampai key valid)
-    local validated = false
-    task.spawn(function()
-        while gui.Parent do
-            if _G.VRILZ_KEY_VALIDATED then
-                validated = true
-                break
-            end
-            task.wait(0.1)
+    discordBtn.MouseButton1Click:Connect(function()
+        if A_Links.Discord ~= "" then
+            a_Notify("Discord", "Invite link copied!", 2, "discord")
+            pcall(function() setclipboard(A_Links.Discord) end)
         end
     end)
-    -- Tunggu sampai user valid atau tutup
-    while gui.Parent do
+
+    textBox.FocusLost:Connect(function(enter) if enter then handleRedeem() end end)
+
+    a_setupDragging(header, container)
+    A_Tween:Create(container, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, 0, 0.45, 0)}):Play()
+    task.wait(0.6)
+    doors.open(function()
+        task.wait(0.2)
+        ui.toggleUser(userIcon)
+        if #A_Changelog > 0 then task.wait(0.3) ui.toggleCL(changelogIcon) end
+    end)
+end
+
+-- ===== PUBLIC ENTRY =====
+function ArqelUI.ShowKeyWindow(onSuccess)
+    a_ensureIconsReady(function()
+        a_BuildKeyUI(onSuccess)
+    end)
+end
+
+_G.VRILZ_ArqelUI = ArqelUI
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- STARTUP — restore saved key (TANPA auto-unlock Sabtu)
+-- ═══════════════════════════════════════════════════════════════════════
+local savedKey = loadSavedKey()
+if savedKey then
+    local valid, msg, data, isNetwork = verifySavedKeyWithServer(savedKey)
+    if valid and data then
+        applyKeyInfo(data, savedKey)
+        print("[VrilzHub] ✅ Auto-restore key valid:", Shared.KeyType)
+        _G.VRILZ_KEY_VALIDATED = true
+        _G.VRILZ_KeyValidated = true
+    elseif isNetwork then
+        print("[VrilzHub] ⚠️ Verify network error, tetap pakai key tersimpan")
+        applyKeyInfo(data or {}, savedKey)
+        Shared.KeyType = Shared.KeyType or "PREMIUM"
+        _G.VRILZ_KEY_VALIDATED = true
+    else
+        print("[VrilzHub] ❌ Saved key invalid:", msg)
+        clearSavedKey()
+    end
+end
+
+if not _G.VRILZ_KEY_VALIDATED then
+    ArqelUI.ShowKeyWindow(function()
+        -- onSuccess: setelah key valid + door tutup + GUI hancur
+        -- (script lanjut ke bawah lewat gate _G.VRILZ_KEY_VALIDATED)
+    end)
+    -- Tunggu sampai user valid atau tutup window
+    while not _G.VRILZ_KEY_VALIDATED do
         task.wait(0.1)
-    end
-    if not _G.VRILZ_KEY_VALIDATED then
-        -- User tutup tanpa valid → stop total
-        return
     end
 end
 
