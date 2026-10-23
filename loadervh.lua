@@ -1,10 +1,10 @@
 -- credits pngu
--- https://discord.gg/JD4s8wrvVH
+-- https://discord.gg/psWhrYWbq
 local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
 		game:GetService("StarterGui")
-			:SetCore("SendNotification", { Title = "Corvus", Text = "Already starting, give it a few seconds", Duration = 5 })
+			:SetCore("SendNotification", { Title = "VrilzHub", Text = "Already starting, give it a few seconds", Duration = 5 })
 	end)
 	return
 end
@@ -5394,7 +5394,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
     end
     
     function Library:OpenDiscordInvite(Code: string?): boolean
-        local Invite = tostring(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
+        local Invite = tostring(Library.DiscordInvite or "https://discord.gg/psWhrYWbq")
         if typeof(Code) ~= "string" or Code == "" then
             Code = string.match(Invite, "([%w%-]+)/?$")
         end
@@ -6025,9 +6025,9 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 			table.insert(State.Listeners, Paint)
 			Paint()
 			if Library.FetchCommunity then
-				local _, Code = ParseDiscordInvite(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
-				Library.FetchCommunity(Code)
-			end
+            local _, Code = ParseDiscordInvite(Library.DiscordInvite or "https://discord.gg/psWhrYWbq")
+              Library.FetchCommunity(Code)
+            end
 		end
 	end
 
@@ -7136,7 +7136,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
     
         pcall(function()
             local function OpenCommunity()
-                local Invite = tostring(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
+                local Invite = tostring(Library.DiscordInvite or "https://discord.gg/psWhrYWbq")
                 Library:CopyToClipboard(Invite, "Discord invite copied")
                 local Code = string.match(Invite, "([%w%-]+)/?$")
                 if Code then
@@ -20642,8 +20642,8 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
                 Parent = CurrentTabInfo,
             })
     
-            local BrandTitle = tostring(WindowInfo.Title or "Corvus")
-            local BrandAuthor = if WindowInfo.Author == false then "" else "made by " .. tostring(WindowInfo.Author or "Cinek")
+            local BrandTitle = tostring(WindowInfo.Title or "VrilzHub")
+            local BrandAuthor = if WindowInfo.Author == false then "" else "made by " .. tostring(WindowInfo.Author or "VrilzHub")
             local BrandTitleWidth = Library:GetTextBounds(BrandTitle, GetBoldFont(), 17, 1000)
             local BrandAuthorWidth = if BrandAuthor ~= "" then Library:GetTextBounds(BrandAuthor, Library.Scheme.Font, 12, 1000) else 0
             local BrandWidth = math.ceil(math.max(BrandTitleWidth, BrandAuthorWidth) + 4)
@@ -32441,7 +32441,7 @@ do
 	SaveManager = loadAddon("SaveManager.lua")
 	Options = Library.Options
 	Toggles = Library.Toggles
-	Discord = "https://discord.gg/JD4s8wrvVH"
+	Discord = "https://discord.gg/psWhrYWbq"
 	GameName = "Break and Steal an Egg"
 	LoaderScript = 'loadstring(game:HttpGet("' .. HubRepo .. 'Loader"))()'
 	local Env = getgenv()
@@ -39427,8 +39427,8 @@ do
 	end
 	N.uiStart = os.clock()
 	Window = Library:CreateWindow({
-		Title = "Corvus",
-		Author = "Cinek",
+		Title = "VrilzHub",
+		Author = "Vrilz",
 		Theme = "Corvus Silver",
 		Icon = "corvus",
 		Footer = GameName,
@@ -39452,7 +39452,7 @@ do
 				Discord = Discord,
 				DiscordAvatar = "corvus-square",
 				DiscordBanner = "corvus-banner",
-				DiscordTitle = "Corvus",
+				DiscordTitle = "VrilzHub",
 				DiscordDescription = "Keyless scripts, updates and support",
 				Feedback = function(Box)
 					Tabs.FeedbackBox = Box
@@ -41415,8 +41415,8 @@ do
 			end
 		end)
 		notify(
-			"Corvus",
-			if Library.IsMobile then "Loaded and ready. The round Corvus button opens and closes the hub." else "Loaded. Press " .. key .. " to hide or show the menu.",
+			"VrilzHub",
+			if Library.IsMobile then "Loaded and ready. The round Vrilz button opens and closes the hub." else "Loaded. Press " .. key .. " to hide or show the menu.",
 			5
 		)
 	end
