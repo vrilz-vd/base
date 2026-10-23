@@ -40689,11 +40689,7 @@ do
 			flushLog(true)
 		end)
 	end
-
-if Tabs.Commands and Tabs.Commands.Button then
-    Tabs.Commands.Button.Visible = false
-end
-						
+			
 	if Library.SetQuickBar then
 		pcall(function()
 			Library:SetQuickBar({
