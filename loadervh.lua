@@ -30,7 +30,7 @@ do
 	end
 	if not ok then
 		Boot.CorvusBooting = nil
-		warn("[Corvus] This is not Break and Steal an Egg, the hub was not started")
+		warn("[Vrilz] This is not Break and Steal an Egg, the hub was not started")
 		return
 	end
 	waited = 0
