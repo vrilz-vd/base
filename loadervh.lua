@@ -1,10 +1,10 @@
 -- credits pngu
--- https://discord.gg/psWhrYWbq
+-- https://discord.gg/JD4s8wrvVH
 local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
 		game:GetService("StarterGui")
-			:SetCore("SendNotification", { Title = "VrilzHub", Text = "Already starting, give it a few seconds", Duration = 5 })
+			:SetCore("SendNotification", { Title = "Corvus", Text = "Already starting, give it a few seconds", Duration = 5 })
 	end)
 	return
 end
@@ -5394,7 +5394,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
     end
     
     function Library:OpenDiscordInvite(Code: string?): boolean
-        local Invite = tostring(Library.DiscordInvite or "https://discord.gg/psWhrYWbq")
+        local Invite = tostring(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
         if typeof(Code) ~= "string" or Code == "" then
             Code = string.match(Invite, "([%w%-]+)/?$")
         end
@@ -5922,7 +5922,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 			Width = 320,
 			Timeout = 45,
 			Icon = "message-circle",
-			Title = "Join the VrilzHub Discord",
+			Title = "Join the Corvus Discord",
 			Text = "Updates, codes and support",
 			ConfirmText = "Join Discord",
 			CancelText = "I'm already in, don't ask again",
@@ -6025,9 +6025,9 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 			table.insert(State.Listeners, Paint)
 			Paint()
 			if Library.FetchCommunity then
-            local _, Code = ParseDiscordInvite(Library.DiscordInvite or "https://discord.gg/psWhrYWbq")
-              Library.FetchCommunity(Code)
-            end
+				local _, Code = ParseDiscordInvite(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
+				Library.FetchCommunity(Code)
+			end
 		end
 	end
 
@@ -7136,7 +7136,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
     
         pcall(function()
             local function OpenCommunity()
-                local Invite = tostring(Library.DiscordInvite or "https://discord.gg/psWhrYWbq")
+                local Invite = tostring(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
                 Library:CopyToClipboard(Invite, "Discord invite copied")
                 local Code = string.match(Invite, "([%w%-]+)/?$")
                 if Code then
@@ -20324,9 +20324,9 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
         Library.TabSwipeFrom = WindowInfo.TabSwipeFrom or "right"
     
         local IsDefaultSearchbarSize = WindowInfo.SearchbarSize == UDim2.fromScale(1, 1)
-        local TopbarButtonCount = 0
-        if WindowInfo.MinimizeButton ~= false then TopbarButtonCount += 1 end
-        if WindowInfo.NotificationCenter ~= false then TopbarButtonCount += 1 end
+        local TopbarButtonCount = (WindowInfo.MinimizeButton ~= false and 1 or 0) + (WindowInfo.NotificationCenter ~= false and 1 or 0) + (WindowInfo.Console ~= false and 1 or 0)
+        local ConsoleButton
+        local ConsoleImage
         local TopbarRightInset = if TopbarButtonCount > 0 then 51 + 28 * TopbarButtonCount else 49
         local BottomBar
         local BottomLine
@@ -20642,8 +20642,8 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
                 Parent = CurrentTabInfo,
             })
     
-            local BrandTitle = tostring(WindowInfo.Title or "VrilzHub")
-            local BrandAuthor = if WindowInfo.Author == false then "" else "made by " .. tostring(WindowInfo.Author or "VrilzHub")
+            local BrandTitle = tostring(WindowInfo.Title or "Corvus")
+            local BrandAuthor = if WindowInfo.Author == false then "" else "made by " .. tostring(WindowInfo.Author or "Cinek")
             local BrandTitleWidth = Library:GetTextBounds(BrandTitle, GetBoldFont(), 17, 1000)
             local BrandAuthorWidth = if BrandAuthor ~= "" then Library:GetTextBounds(BrandAuthor, Library.Scheme.Font, 12, 1000) else 0
             local BrandWidth = math.ceil(math.max(BrandTitleWidth, BrandAuthorWidth) + 4)
@@ -20988,7 +20988,12 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
                     Parent = BellBadge,
                 })
             end
-
+    
+            if WindowInfo.Console ~= false then
+                ConsoleButton, ConsoleImage = CreateTopbarButton(Library:GetIcon("square-terminal"))
+                Library:AddIconHover(ConsoleButton, ConsoleImage, { Scale = 1.15, Tilt = -8 })
+            end
+    
             BottomBackground = New("Frame", {
                 AnchorPoint = Vector2.new(0, 1),
                 BackgroundColor3 = function()
@@ -26098,7 +26103,7 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
                     end
                     return OrderA < OrderB
                 end)
-
+    
                 return List
             end
             Window.GetOrderedTabs = GetOrderedTabs
@@ -27850,7 +27855,186 @@ end
     
             return Tab
         end
-            
+    
+        do
+            local Console = {
+                Open = false,
+                Built = false,
+                History = {},
+                HistoryIndex = 0,
+                Filtered = {},
+                Rows = {},
+                Suggestion = nil,
+            }
+            Window.Console = Console
+    
+            local Panel, Input, Ghost, InputStroke, ListFrame, OutputFrame, StatusLabel, CountLabel, LoadButton, EmptyLabel
+            local RowHeight, PoolSize = 40, 18
+            local MonoFont = Font.fromEnum(Enum.Font.RobotoMono)
+            local KindColors = {
+                system = function()
+                    return Library.Scheme.AccentColor
+                end,
+                input = function()
+                    return Library.Scheme.FontColor
+                end,
+                success = function()
+                    return Color3.fromRGB(96, 214, 150)
+                end,
+                error = function()
+                    return Library.Scheme.RedColor
+                end,
+                iy = function()
+                    return GetSecondaryAccent()
+                end,
+            }
+    
+            local function EscapeRich(Text: string): string
+                return (tostring(Text):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
+            end
+    
+            local function CommandMatches(Command, Word: string): number?
+                if Word == "" then
+                    return 1
+                end
+    
+                local Best = nil
+                for Index, Name in { Command.Name, table.unpack(Command.Aliases) } do
+                    local Score = nil
+                    if Name == Word then
+                        Score = 300
+                    elseif string.sub(Name, 1, #Word) == Word then
+                        Score = 220 - #Name
+                    elseif string.find(Name, Word, 1, true) then
+                        Score = 120 - #Name
+                    end
+                    if Score and Index > 1 then
+                        Score -= 5
+                    end
+                    if Score and (not Best or Score > Best) then
+                        Best = Score
+                    end
+                end
+    
+                if not Best and #Word >= 3 and string.find(string.lower(Command.Description), Word, 1, true) then
+                    Best = 20
+                end
+                return Best
+            end
+    
+            local function FilterCommands(Query: string)
+                local Word = string.lower(string.match(Query, "^%s*(%S*)") or "")
+                local Scored = {}
+                for Order, Command in Library:GetCommands() do
+                    local Score = if Command.Source == "Pack" then CommandMatches(Command, Word) else nil
+                    if Score then
+                        table.insert(Scored, { Command = Command, Score = Score, Order = Order })
+                    end
+                end
+                if Word ~= "" then
+                    table.sort(Scored, function(A, B)
+                        if A.Score == B.Score then
+                            return A.Order < B.Order
+                        end
+                        return A.Score > B.Score
+                    end)
+                end
+    
+                local Result = {}
+                for _, Item in Scored do
+                    table.insert(Result, Item.Command)
+                end
+                return Result, Word
+            end
+            Console.FilterCommands = FilterCommands
+    
+            local function PaintStatus()
+                if not Console.Built then
+                    return
+                end
+    
+                if InfiniteYield.Loaded then
+                    StatusLabel.Text = string.format("%d commands", #InfiniteYield.Commands)
+                    LoadButton.Visible = false
+                elseif InfiniteYield.Loading then
+                    StatusLabel.Text = "Loading commands\u{2026}"
+                    LoadButton.Visible = false
+                else
+                    StatusLabel.Text = "Commands not loaded"
+                    LoadButton.Visible = true
+                end
+            end
+    
+            local function RenderRows()
+                if not Console.Built then
+                    return
+                end
+    
+                local Scale = math.max(Library.DPIScale, 0.01)
+                local First = math.max(0, math.floor(ListFrame.CanvasPosition.Y / Scale / RowHeight) - 1)
+                for Index, Row in Console.Rows do
+                    local DataIndex = First + Index
+                    local Command = Console.Filtered[DataIndex]
+                    Row.Button.Visible = Command ~= nil
+                    Row.Command = Command
+    
+                    if Command then
+                        Row.Button.Position = UDim2.fromOffset(4, (DataIndex - 1) * RowHeight + 4)
+    
+                        local Accent = Library.Scheme.AccentColor:ToHex()
+                        local Head = string.format('<font color="#%s">%s</font>', Accent, EscapeRich(Command.Name))
+                        if Command.Args ~= "" then
+                            Head ..= string.format(' <font transparency="0.45">%s</font>', EscapeRich(Command.Args))
+                        end
+                        if #Command.Aliases > 0 then
+                            Head ..= string.format('  <font transparency="0.6">%s</font>', EscapeRich(table.concat(Command.Aliases, ", ")))
+                        end
+                        Row.Head.Text = Head
+                        Row.Desc.Text = if Command.Description ~= "" then EscapeRich(Command.Description) else "No description"
+                        Row.Source.Text = ""
+                    end
+                end
+            end
+    
+            local function RefreshList()
+                if not Console.Built then
+                    return
+                end
+    
+                local Filtered = FilterCommands(Input.Text)
+                Console.Filtered = Filtered
+                ListFrame.CanvasSize = UDim2.fromOffset(0, #Filtered * RowHeight + 8)
+                CountLabel.Text = string.format("%d", #Filtered)
+                EmptyLabel.Visible = #Filtered == 0
+                RenderRows()
+                PaintStatus()
+            end
+    
+            local function UpdateGhost()
+                if not Console.Built then
+                    return
+                end
+    
+                local Text = Input.Text
+                Console.Suggestion = nil
+                Ghost.Text = ""
+    
+                if Text == "" or string.find(Text, "%s") then
+                    return
+                end
+    
+                local Word = string.lower(Text)
+                for _, Command in Console.Filtered do
+                    for _, Name in { Command.Name, table.unpack(Command.Aliases) } do
+                        if string.sub(Name, 1, #Word) == Word and #Name > #Word then
+                            Console.Suggestion = Name
+                            Ghost.Text = Text .. string.sub(Name, #Word + 1)
+                            return
+                        end
+                    end
+                end
+            end
+    
             local function AddLine(Entry)
                 if not Console.Built then
                     return
@@ -28378,6 +28562,127 @@ end
                 end
             end
     
+            function Window:AddCommandsTab(Info)
+                if Console.Tab then
+                    return Console.Tab
+                end
+                Info = Info or {}
+    
+                local Tab = Window:AddTab({
+                    Name = Info.Name or "Commands",
+                    Icon = Info.Icon or "square-terminal",
+                    Description = Info.Description or "Every command in one place",
+                })
+                for _, Side in Tab.Sides do
+                    Side.Visible = false
+                end
+    
+                Console.Tab = Tab
+                Build(Tab.Container)
+                RefreshList()
+                UpdateGhost()
+    
+                if Info.AutoLoad ~= false then
+                    task.spawn(Library.LoadInfiniteYield, Library)
+                end
+    
+                return Tab
+            end
+    
+            function Console:SetOpen(State: boolean)
+                if State == false then
+                    return
+                end
+    
+                if not Console.Tab then
+                    Window:AddCommandsTab()
+                end
+                if Window:IsMinimized() then
+                    Window:SetMinimized(false)
+                end
+                if not Library.Toggled then
+                    task.spawn(Library.Toggle, Library, true)
+                end
+    
+                Console.Tab:Show()
+                task.defer(function()
+                    if Console.InputBox then
+                        Console.InputBox:CaptureFocus()
+                    end
+                end)
+            end
+    
+            function Console:Toggle()
+                if Console.Tab and Library.ActiveTab == Console.Tab and Library.Toggled then
+                    if Console.InputBox then
+                        Console.InputBox:CaptureFocus()
+                    end
+                    return
+                end
+                Console:SetOpen(true)
+            end
+    
+            function Console:Prefill(Text: string)
+                Console:SetOpen(true)
+                if not Input then
+                    return
+                end
+                Input.Text = Text
+                task.defer(function()
+                    Input:CaptureFocus()
+                    Input.CursorPosition = #Input.Text + 1
+                end)
+            end
+    
+            function Library:OpenConsole(Text: string?)
+                if Text then
+                    Console:Prefill(Text)
+                else
+                    Console:SetOpen(true)
+                end
+            end
+    
+            function Window:ToggleConsole()
+                Console:Toggle()
+            end
+    
+            if ConsoleButton then
+                ConsoleButton.MouseButton1Click:Connect(function()
+                    Console:Toggle()
+                end)
+            end
+    
+            Library:GiveSignal(UserInputService.InputBegan:Connect(function(Input: InputObject)
+                if Library.Unloaded or WindowInfo.Console == false then
+                    return
+                end
+    
+                local Ctrl = UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)
+                if Ctrl and Input.KeyCode == Enum.KeyCode.Backquote then
+                    Console:Toggle()
+                    return
+                end
+    
+                if not Console.Built then
+                    return
+                end
+    
+                if (Input.KeyCode == Enum.KeyCode.Up or Input.KeyCode == Enum.KeyCode.Down) and Console.InputBox and Console.InputBox:IsFocused() then
+                    local History = Console.History
+                    if #History == 0 then
+                        return
+                    end
+    
+                    local Step = if Input.KeyCode == Enum.KeyCode.Up then 1 else -1
+                    Console.HistoryIndex = math.clamp(Console.HistoryIndex + Step, 0, #History)
+                    local Box = Console.InputBox
+                    if Box then
+                        Box.Text = if Console.HistoryIndex == 0 then "" else History[Console.HistoryIndex]
+                        Box.CursorPosition = #Box.Text + 1
+                    end
+                end
+            end))
+    
             local function FindElement(Query: string, Kinds: { [string]: boolean }?)
                 Query = string.lower(Trim(Query))
                 if Query == "" then
@@ -28413,7 +28718,256 @@ end
                 end
                 return Best
             end
-
+    
+            Library:AddCommand({
+                Name = "help",
+                Aliases = { "cmds", "commands", "?" },
+                Description = "Shows how the console works",
+                Callback = function()
+                    return string.format("%d commands loaded. Click one on the left, Tab completes, Up/Down walks history.", #InfiniteYield.Commands)
+                end,
+            })
+            Library:AddCommand({
+                Name = "clear",
+                Aliases = { "cls" },
+                Description = "Clears the console output",
+                Callback = function()
+                    Library:ClearConsole()
+                end,
+            })
+            Library:AddCommand({
+                Name = "toggle",
+                Aliases = { "t" },
+                Args = "[feature] [on/off]",
+                Description = "Flips any hub toggle by name, e.g. toggle auto farm",
+                Callback = function(Args)
+                    local State = nil
+                    local Last = string.lower(Args[#Args] or "")
+                    if Last == "on" or Last == "true" then
+                        State = true
+                        table.remove(Args)
+                    elseif Last == "off" or Last == "false" then
+                        State = false
+                        table.remove(Args)
+                    end
+    
+                    local Element = FindElement(table.concat(Args, " "), { Toggle = true, Checkbox = true })
+                    if not Element then
+                        error("No toggle matches that name", 0)
+                    end
+                    if State == nil then
+                        State = not Element.Value
+                    end
+                    Element:SetValue(State)
+                    return string.format("%s \u{2192} %s", tostring(Element.Text), if State then "ON" else "OFF")
+                end,
+            })
+            Library:AddCommand({
+                Name = "set",
+                Args = "[feature] [value]",
+                Description = "Sets a slider, dropdown or input, e.g. set range 120",
+                Callback = function(Args)
+                    if #Args < 2 then
+                        error("Usage: set [feature] [value]", 0)
+                    end
+    
+                    local Value = table.remove(Args)
+                    local Element = FindElement(table.concat(Args, " "), { Slider = true, Dropdown = true, Input = true })
+                    if not Element then
+                        error("No slider, dropdown or input matches that name", 0)
+                    end
+    
+                    if Element.Type == "Slider" then
+                        local Number = tonumber(Value)
+                        if not Number then
+                            error("Sliders need a number", 0)
+                        end
+                        Element:SetValue(Number)
+                    elseif Element.Type == "Dropdown" then
+                        local Match = nil
+                        for _, Option in Element.Values or {} do
+                            if string.lower(tostring(Option)) == string.lower(Value) or string.find(string.lower(tostring(Option)), string.lower(Value), 1, true) then
+                                Match = Option
+                                break
+                            end
+                        end
+                        if Match == nil then
+                            error("That value is not in the list", 0)
+                        end
+                        Element:SetValue(if Element.Multi then { [Match] = true } else Match)
+                        Value = tostring(Match)
+                    else
+                        Element:SetValue(Value)
+                    end
+    
+                    return string.format("%s \u{2192} %s", tostring(Element.Text), tostring(Value))
+                end,
+            })
+            Library:AddCommand({
+                Name = "tab",
+                Args = "[name]",
+                Description = "Opens a tab by name",
+                Callback = function(Args)
+                    local Query = string.lower(table.concat(Args, " "))
+                    for _, Tab in Window.GetOrderedTabs() do
+                        if string.find(string.lower(tostring(Tab.Name)), Query, 1, true) then
+                            Tab:Show()
+                            return "Opened " .. tostring(Tab.Name)
+                        end
+                    end
+                    error("No tab matches that name", 0)
+                end,
+            })
+            Library:AddCommand({
+                Name = "theme",
+                Args = "[name]",
+                Description = "Applies a Corvus theme: night, silver, eclipse, aurora, ember, frost, gilded",
+                Callback = function(Args)
+                    local Query = string.lower(table.concat(Args, " "))
+                    for _, Name in Library:GetThemeNames() do
+                        if Query ~= "" and string.find(string.lower(Name), Query, 1, true) then
+                            Library:SetTheme(Name)
+                            Library:SetSetting("Theme", Name)
+                            return "Theme \u{2192} " .. Name
+                        end
+                    end
+                    return "Themes: " .. table.concat(Library:GetThemeNames(), ", ")
+                end,
+            })
+            Library:AddCommand({
+                Name = "hud",
+                Aliases = { "stats", "fps" },
+                Description = "Shows or hides the stats overlay",
+                Callback = function()
+                    local Value = not Library.StatsHUDEnabled
+                    Library:SetStatsHUD(Value)
+                    Library:SetSetting("StatsHUD", Value)
+                    return "Stats overlay " .. (if Value then "on" else "off")
+                end,
+            })
+            Library:AddCommand({
+                Name = "stars",
+                Aliases = { "starfield" },
+                Description = "Turns the starfield background on or off",
+                Callback = function()
+                    local Value = WindowInfo.Starfield == false
+                    Window:SetStarfield(Value)
+                    Library:SetSetting("Starfield", Value)
+                    return "Starfield " .. (if Value then "on" else "off")
+                end,
+            })
+            Library:AddCommand({
+                Name = "rejoin",
+                Aliases = { "rj" },
+                Description = "Rejoins this server",
+                Callback = function()
+                    Window:Rejoin()
+                end,
+            })
+            Library:AddCommand({
+                Name = "serverhop",
+                Aliases = { "shop", "hop" },
+                Description = "Moves you to another public server",
+                Callback = function()
+                    task.spawn(Window.ServerHop, Window)
+                end,
+            })
+            Library:AddCommand({
+                Name = "jobid",
+                Description = "Copies this server's Job ID",
+                Callback = function()
+                    Library:CopyToClipboard(game.JobId, false)
+                    return "Job ID copied"
+                end,
+            })
+            Library:AddCommand({
+                Name = "hide",
+                Description = "Hides the menu",
+                Callback = function()
+                    task.spawn(Library.Toggle, Library, false)
+                end,
+            })
+            Library:AddCommand({
+                Name = "unload",
+                Description = "Unloads the whole UI",
+                Callback = function()
+                    task.defer(Library.Unload, Library)
+                end,
+            })
+            Library:AddCommand({
+                Name = "black",
+                Aliases = { "blackscreen", "norender" },
+                Description = "Turns 3D rendering off or on to save GPU",
+                Callback = function()
+                    local Toggle = Library.Toggles.CorvusNoRender
+                    if not Toggle then
+                        error("Disable 3D rendering is not in this hub", 0)
+                    end
+                    Toggle:SetValue(not Toggle.Value)
+                    return "3D rendering " .. (if Toggle.Value then "off" else "on")
+                end,
+            })
+            Library:AddCommand({
+                Name = "bind",
+                Args = "[key] [command]",
+                Description = "Runs any command with one key, e.g. bind B black",
+                Callback = function(Args)
+                    if #Args < 2 then
+                        error("Usage: bind [key] [command]", 0)
+                    end
+                    local Wanted = string.lower(table.remove(Args, 1))
+                    local KeyName = nil
+                    for _, Item in Enum.KeyCode:GetEnumItems() do
+                        if string.lower(Item.Name) == Wanted then
+                            KeyName = Item.Name
+                            break
+                        end
+                    end
+                    if not KeyName then
+                        error("Unknown key: " .. Wanted, 0)
+                    end
+                    local Text = table.concat(Args, " ")
+                    local First = string.lower(Args[1] or "")
+                    if First == "bind" or First == "unbind" then
+                        error("A bind can't run bind", 0)
+                    end
+                    Library:SetQuickBind(KeyName, { Kind = "Command", Target = Text, Label = Text })
+                    return string.format("%s \u{2192} %s", KeyName, Text)
+                end,
+            })
+            Library:AddCommand({
+                Name = "unbind",
+                Args = "[key or all]",
+                Description = "Removes a key bind",
+                Callback = function(Args)
+                    local Wanted = string.lower(Args[1] or "")
+                    local Removed = 0
+                    for KeyName in Library:GetQuickBinds() do
+                        if Wanted == "all" or string.lower(KeyName) == Wanted then
+                            Library:SetQuickBind(KeyName, nil)
+                            Removed += 1
+                        end
+                    end
+                    return if Removed > 0 then string.format("Removed %d bind%s", Removed, if Removed == 1 then "" else "s") else "No bind on that key"
+                end,
+            })
+            Library:AddCommand({
+                Name = "binds",
+                Aliases = { "keys" },
+                Description = "Lists your key binds",
+                Callback = function()
+                    local Lines = {}
+                    for KeyName, Entry in Library:GetQuickBinds() do
+                        if typeof(Entry) == "table" then
+                            table.insert(Lines, string.format("%s \u{2192} %s", KeyName, tostring(Entry.Label or Entry.Target)))
+                        end
+                    end
+                    table.sort(Lines)
+                    return if #Lines > 0 then table.concat(Lines, "\n") else "No binds yet. Right click a toggle or button, or use bind [key] [command]."
+                end,
+            })
+        end
+    
         do
             local Spy = {
                 Built = false,
@@ -31887,7 +32441,7 @@ do
 	SaveManager = loadAddon("SaveManager.lua")
 	Options = Library.Options
 	Toggles = Library.Toggles
-	Discord = "https://discord.gg/psWhrYWbq"
+	Discord = "https://discord.gg/JD4s8wrvVH"
 	GameName = "Break and Steal an Egg"
 	LoaderScript = 'loadstring(game:HttpGet("' .. HubRepo .. 'Loader"))()'
 	local Env = getgenv()
@@ -38873,8 +39427,8 @@ do
 	end
 	N.uiStart = os.clock()
 	Window = Library:CreateWindow({
-		Title = "VrilzHub",
-		Author = "Vrilz",
+		Title = "Corvus",
+		Author = "Cinek",
 		Theme = "Corvus Silver",
 		Icon = "corvus",
 		Footer = GameName,
@@ -38898,7 +39452,7 @@ do
 				Discord = Discord,
 				DiscordAvatar = "corvus-square",
 				DiscordBanner = "corvus-banner",
-				DiscordTitle = "VrilzHub",
+				DiscordTitle = "Corvus",
 				DiscordDescription = "Keyless scripts, updates and support",
 				Feedback = function(Box)
 					Tabs.FeedbackBox = Box
@@ -40138,7 +40692,11 @@ do
 			flushLog(true)
 		end)
 	end
-
+	if Window.AddCommandsTab then
+		pcall(function()
+			Tabs.Commands = Window:AddCommandsTab()
+		end)
+	end
 	if Library.SetQuickBar then
 		pcall(function()
 			Library:SetQuickBar({
@@ -40857,8 +41415,8 @@ do
 			end
 		end)
 		notify(
-			"VrilzHub",
-			if Library.IsMobile then "Loaded and ready. The round Vrilz button opens and closes the hub." else "Loaded. Press " .. key .. " to hide or show the menu.",
+			"Corvus",
+			if Library.IsMobile then "Loaded and ready. The round Corvus button opens and closes the hub." else "Loaded. Press " .. key .. " to hide or show the menu.",
 			5
 		)
 	end
