@@ -2064,10 +2064,74 @@ _G.VRILZ_ArqelUI = ArqelUI
 -- ═══════════════════════════════════════════════════════════════════════
 -- GATE: Key UI dulu, baru hub
 -- ═══════════════════════════════════════════════════════════════════════
+-- ✅ BENAR — wrap hub code dalam function
+local HubMainFunction
+
+-- ⬇️ Ganti seluruh xpcall(function() ... end, debug.traceback) lama
+-- menjadi function assignment seperti ini:
+
+HubMainFunction = function()
+    local Boot = getgenv()
+    
+    -- Boot guard (di dalam function, jadi return aman)
+    if Boot.CorvusBooting then
+        local elapsed = os.clock() - Boot.CorvusBooting
+        if elapsed < 25 then
+            pcall(function()
+                game:GetService("StarterGui"):SetCore("SendNotification", {
+                    Title = "VrilzHub",
+                    Text = "Already starting, give it a few seconds",
+                    Duration = 5,
+                })
+            end)
+            return  -- ✅ AMAN, di dalam function
+        end
+        Boot.CorvusBooting = nil
+    end
+    
+    -- Clear library lama
+    if Boot.CorvusLibrary then
+        pcall(function()
+            if typeof(Boot.CorvusLibrary.Unload) == "function" and not Boot.CorvusLibrary.Unloaded then
+                Boot.CorvusLibrary:Unload()
+            end
+        end)
+        Boot.CorvusLibrary = nil
+    end
+    
+    -- Clear GUI lama
+    pcall(function()
+        local containers = { game:GetService("CoreGui") }
+        if typeof(gethui) == "function" then
+            table.insert(containers, gethui())
+        end
+        local pg = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if pg then table.insert(containers, pg) end
+        for _, c in ipairs(containers) do
+            for _, ch in ipairs(c:GetChildren()) do
+                if ch:IsA("ScreenGui") and (ch.Name == "Corvus" or ch.Name == "VH_KeySystem" or ch.Name == "CorvusLoading") then
+                    ch:Destroy()
+                end
+            end
+        end
+    end)
+    
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+    
+    -- ⬇️ SELURUH HUB CODE ASLI MASUK SINI
+    local HubRepo = "https://raw.githubusercontent.com/vaensigma/Corvus/refs/heads/main/"
+    local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/"
+    local Library = (function()
+        -- ... semua library code ...
+    end)()
+    
+    -- ... dst (N, Tabs, etc) ...
+end
+
+-- startHub: panggil HubMainFunction LANGSUNG
 local function startHub()
-    -- Hub code ada di bawah, DIPANGGIL setelah key valid.
-    -- Karena hub code ada di dalam xpcall top-level (bukan di sini),
-    -- kita cukup set flag supaya hub jalan.
     local Boot = getgenv()
     if Boot.CorvusBooting then
         local elapsed = os.clock() - Boot.CorvusBooting
@@ -2084,9 +2148,27 @@ local function startHub()
         Boot.CorvusBooting = nil
     end
     Boot.CorvusBooting = os.clock()
-    _G.VRILZ_HUB_START = true   -- tanda ke xpcall di bawah
+    
+    -- ⚠️ PENTING: panggil LANGSUNG, jangan via flag
+    local ok, err = xpcall(HubMainFunction, debug.traceback)
+    Boot.CorvusBooting = nil
+    
+    if not ok then
+        local report = "[VrilzHub] Hub failed:\n" .. tostring(err)
+        warn(report)
+        Boot.CorvusLastError = report
+        pcall(setclipboard, report)
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "VrilzHub Error",
+                Text = "Hub failed. Error copied to clipboard.",
+                Duration = 20,
+            })
+        end)
+    end
 end
 
+-- Gate
 if _G.VRILZ_KEY_VALIDATED == true then
     startHub()
 else
@@ -2094,77 +2176,7 @@ else
         startHub()
     end)
 end
-
--- Di bagian xpcall top-level, tambahkan pengecekan:
-local BootOk, BootError = xpcall(function()
-    -- Kalau gate belum set flag, tunggu key dulu
-    if not _G.VRILZ_HUB_START then
-        return   -- atau loop tunggu
-    end
-    local Boot = getgenv()
-    -- ... hub code aslinya ...
-end, debug.traceback)
-
--- ═══════════════════════════════════════════════════════════════════════
--- BOOT GUARD — fix stuck / re-execute
--- ═══════════════════════════════════════════════════════════════════════
-local Boot = getgenv()
-
--- FIX #1: kalau CorvusBooting nyangkut >25 detik, paksa reset
-if Boot.CorvusBooting then
-    local elapsed = os.clock() - Boot.CorvusBooting
-    if elapsed < 25 then
-        pcall(function()
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "VrilzHub",
-                Text = "Already starting, give it a few seconds",
-                Duration = 5,
-            })
-        end)
-        -- Jangan return, tapi skip startHub via flag
-        do return end  -- ini masih top-level block, AMAN karena return di akhir block
-    end
-    Boot.CorvusBooting = nil
-end
-Boot.CorvusBooting = os.clock()
-
--- FIX #3: clear sisa library lama sebelum load ulang
-if Boot.CorvusLibrary then
-    pcall(function()
-        if typeof(Boot.CorvusLibrary.Unload) == "function" and not Boot.CorvusLibrary.Unloaded then
-            Boot.CorvusLibrary:Unload()
-        end
-    end)
-    Boot.CorvusLibrary = nil
-end
-
--- FIX #4: clear container GUI lama
-pcall(function()
-    local containers = { game:GetService("CoreGui") }
-    if typeof(gethui) == "function" then
-        table.insert(containers, gethui())
-    end
-    local pg = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
-    if pg then table.insert(containers, pg) end
-    for _, c in ipairs(containers) do
-        for _, ch in ipairs(c:GetChildren()) do
-            if ch:IsA("ScreenGui") and (ch.Name == "Corvus" or ch.Name == "VH_KeySystem" or ch.Name == "CorvusLoading") then
-                ch:Destroy()
-            end
-        end
-    end
-end)
-
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
-if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
-	pcall(function()
-		game:GetService("StarterGui")
-			:SetCore("SendNotification", { Title = "VrilzHub", Text = "Already starting, give it a few seconds", Duration = 5 })
-	end)
-	return
-end
+	
 Boot.CorvusBooting = os.clock()
 if not game:IsLoaded() then
 	game.Loaded:Wait()
@@ -2197,7 +2209,6 @@ do
 	LocalPlayer:WaitForChild("PlayerGui", 20)
 	task.wait(0.5)
 end
-local BootOk, BootError = xpcall(function()
 local HubRepo = "https://raw.githubusercontent.com/vaensigma/Corvus/refs/heads/main/"
 local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/"
     local Library = (function()
