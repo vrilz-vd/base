@@ -20653,45 +20653,37 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
             })
     
         if WindowInfo.Icon then
-            if WindowInfo.Icon == "vhpetir" then
-    local vhHolder, vhLabel = Library.MakeVHLogo(MiniCard, UDim2.fromOffset(26, 26), {
-        Color = Color3.fromRGB(255, 40, 40),
-        Pulse = true,
-        BgTransparency = 0.05,
-    })
-    if vhHolder then
-        vhHolder.AnchorPoint = Vector2.new(0, 0.5)
-        vhHolder.Position = UDim2.new(0, 12, 0, 24)
-        MiniIcon = vhHolder
-    end
-    if vhLabel then
-        vhLabel.ZIndex = 10
-        vhLabel.TextStrokeTransparency = 0.2
+    if WindowInfo.Icon == "vhpetir" then
+        -- Placeholder dulu, MiniCard belum dibuat. Akan diisi setelah MiniCard ada.
+        WindowIcon = New("Frame", {
+            BackgroundTransparency = 1,
+            Size = WindowInfo.IconSize,
+            Parent = TitleHolder,
+        })
+    else
+        local Icon = Library:GetCustomIcon(WindowInfo.Icon)
+        WindowIcon = New("ImageLabel", {
+            Size = WindowInfo.IconSize,
+            Parent = TitleHolder,
+        })
+        if Icon then
+            Library:ApplyLucideIcon(WindowIcon, Icon)
+        end
+        if Icon and Icon.IconName then
+            Library:SetSchemeProperty(WindowIcon, "ImageColor3", "AccentColor")
+        end
+        Library:AddIconHover(WindowIcon, WindowIcon, { Scale = 1.12, Tilt = -8 })
     end
 else
-                local Icon = Library:GetCustomIcon(WindowInfo.Icon)
-                WindowIcon = New("ImageLabel", {
-                    Size = WindowInfo.IconSize,
-                    Parent = TitleHolder,
-                })
-                if Icon then
-                    Library:ApplyLucideIcon(WindowIcon, Icon)
-                end
-                if Icon and Icon.IconName then
-                    Library:SetSchemeProperty(WindowIcon, "ImageColor3", "AccentColor")
-                end
-                Library:AddIconHover(WindowIcon, WindowIcon, { Scale = 1.12, Tilt = -8 })
-            end
-        else
-            WindowIcon = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Size = WindowInfo.IconSize,
-                Text = WindowInfo.Title:sub(1, 1),
-                TextScaled = true,
-                Visible = false,
-                Parent = TitleHolder,
-            })
-        end
+    WindowIcon = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Size = WindowInfo.IconSize,
+        Text = WindowInfo.Title:sub(1, 1),
+        TextScaled = true,
+        Visible = false,
+        Parent = TitleHolder,
+    })
+end
     
             local X = Library:GetTextBounds(
                 WindowInfo.Title,
@@ -21453,7 +21445,38 @@ else
         local MiniBellBadge
         local MiniBell
         local MiniExpand
-    
+
+-- Isi WindowIcon (header) dengan VH logo mini
+if WindowInfo.Icon == "vhpetir" and WindowIcon and WindowIcon:IsA("Frame") then
+    local hHolder = New("Frame", {
+        BackgroundColor3 = Color3.fromRGB(20, 8, 8),
+        BackgroundTransparency = 0.15,
+        ClipsDescendants = true,
+        Size = UDim2.fromScale(1, 1),
+        Parent = WindowIcon,
+    })
+    New("UICorner", { CornerRadius = UDim.new(0, 6), Parent = hHolder })
+    New("UIStroke", {
+        Color = Color3.fromRGB(255, 40, 40),
+        Thickness = 1.2,
+        Transparency = 0.2,
+        Parent = hHolder,
+    })
+    local hFace = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        Text = "VH",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 0,
+        TextScaled = true,
+        TextStrokeColor3 = Color3.fromRGB(255, 40, 40),
+        TextStrokeTransparency = 0,
+        FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
+        Parent = hHolder,
+    })
+    New("UITextSizeConstraint", { MaxTextSize = 16, MinTextSize = 6, Parent = hFace })
+end
+	
         do
             MiniCard = New("Frame", {
                 BackgroundTransparency = 1,
@@ -21467,34 +21490,147 @@ else
             })
     
                         local MiniIcon
-            if WindowInfo.Icon == "vhpetir" then
-                MiniIcon = MakeVHLogo(MiniCard, UDim2.fromOffset(26, 26), {
-                    Color = Color3.fromRGB(255, 40, 40),
-                    Pulse = true,
-                })
-                MiniIcon.AnchorPoint = Vector2.new(0, 0.5)
-                MiniIcon.Position = UDim2.new(0, 12, 0, 24)
-            else
-                MiniIcon = New("ImageLabel", {
-                    AnchorPoint = Vector2.new(0, 0.5),
-                    BackgroundTransparency = 1,
-                    Position = UDim2.new(0, 12, 0, 24),
-                    Size = UDim2.fromOffset(26, 26),
-                    Parent = MiniCard,
-                })
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, 6),
-                    Parent = MiniIcon,
-                })
-                local MiniIconData = Library:GetCustomIcon(if WindowInfo.Icon then WindowInfo.Icon else "corvus")
-                if MiniIconData then
-                    Library:ApplyLucideIcon(MiniIcon, MiniIconData)
-                    if MiniIconData.IconName then
-                        Library:SetSchemeProperty(MiniIcon, "ImageColor3", "AccentColor")
-                    end
-                end
+if WindowInfo.Icon == "vhpetir" then
+    -- ═══ VH Logo inline (tidak butuh helper) ═══
+    local vhHolder = New("Frame", {
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundColor3 = Color3.fromRGB(20, 8, 8),
+        BackgroundTransparency = 0.15,
+        ClipsDescendants = true,
+        Position = UDim2.new(0, 12, 0, 24),
+        Size = UDim2.fromOffset(26, 26),
+        Parent = MiniCard,
+    })
+    New("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = vhHolder,
+    })
+    New("UIStroke", {
+        Color = Color3.fromRGB(255, 40, 40),
+        Thickness = 1.5,
+        Transparency = 0.35,
+        Parent = vhHolder,
+    })
+
+    -- Shadow
+    local vhShadow = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(1, 2),
+        Size = UDim2.fromScale(1, 1),
+        Text = "VH",
+        TextColor3 = Color3.fromRGB(0, 0, 0),
+        TextTransparency = 0.05,
+        TextSize = 0,
+        TextScaled = true,
+        FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
+        ZIndex = 2,
+        Parent = vhHolder,
+    })
+    New("UITextSizeConstraint", { MaxTextSize = 14, MinTextSize = 6, Parent = vhShadow })
+
+    -- Depth accent
+    local vhDepth = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(1, 1),
+        Size = UDim2.fromScale(1, 1),
+        Text = "VH",
+        TextColor3 = Color3.fromRGB(255, 40, 40),
+        TextSize = 0,
+        TextScaled = true,
+        FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
+        ZIndex = 3,
+        Parent = vhHolder,
+    })
+    New("UITextSizeConstraint", { MaxTextSize = 14, MinTextSize = 6, Parent = vhDepth })
+
+    -- Face
+    local vhFace = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        Text = "VH",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 0,
+        TextScaled = true,
+        TextStrokeColor3 = Color3.fromRGB(255, 40, 40),
+        TextStrokeTransparency = 0,
+        FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
+        ZIndex = 4,
+        Parent = vhHolder,
+    })
+    New("UITextSizeConstraint", { MaxTextSize = 14, MinTextSize = 6, Parent = vhFace })
+
+    -- Lightning
+    local lightningHolder = New("Frame", {
+        BackgroundTransparency = 1,
+        Size = UDim2.fromScale(1, 1),
+        ClipsDescendants = true,
+        ZIndex = 5,
+        Parent = vhHolder,
+    })
+    local boltSegments = {
+        {0.20, 0.15, 10, -30},
+        {0.78, 0.30, 9, 35},
+        {0.15, 0.55, 11, -25},
+        {0.82, 0.70, 8, 30},
+    }
+    local bolts = {}
+    for _, seg in ipairs(boltSegments) do
+        local bolt = New("Frame", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundColor3 = Color3.fromRGB(170, 220, 255),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Position = UDim2.fromScale(seg[1], seg[2]),
+            Rotation = seg[4],
+            Size = UDim2.fromOffset(1.5, seg[3]),
+            ZIndex = 6,
+            Parent = lightningHolder,
+        })
+        New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = bolt })
+        table.insert(bolts, bolt)
+    end
+
+    -- Lightning loop
+    task.spawn(function()
+        while vhHolder.Parent do
+            task.wait(math.random(15, 35) / 10)
+            if not vhHolder.Parent then break end
+            for _, bolt in ipairs(bolts) do
+                if bolt.Parent then bolt.BackgroundTransparency = 0 end
+                task.wait(0.05)
+                if bolt.Parent then bolt.BackgroundTransparency = 1 end
             end
-            Window.MiniIcon = MiniIcon
+            task.wait(0.08)
+            for _, bolt in ipairs(bolts) do
+                if bolt.Parent then bolt.BackgroundTransparency = 0 end
+                task.wait(0.03)
+                if bolt.Parent then bolt.BackgroundTransparency = 1 end
+            end
+        end
+    end)
+
+    MiniIcon = vhHolder
+else
+    MiniIcon = New("ImageLabel", {
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 24),
+        Size = UDim2.fromOffset(26, 26),
+        Parent = MiniCard,
+    })
+    New("UICorner", {
+        CornerRadius = UDim.new(0, 6),
+        Parent = MiniIcon,
+    })
+    local MiniIconData = Library:GetCustomIcon(if WindowInfo.Icon then WindowInfo.Icon else "corvus")
+    if MiniIconData then
+        Library:ApplyLucideIcon(MiniIcon, MiniIconData)
+        if MiniIconData.IconName then
+            Library:SetSchemeProperty(MiniIcon, "ImageColor3", "AccentColor")
+        end
+    end
+end
+Window.MiniIcon = MiniIcon
     
             New("TextLabel", {
                 BackgroundTransparency = 1,
