@@ -20324,6 +20324,9 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
         Library.TabSwipeFrom = WindowInfo.TabSwipeFrom or "right"
     
         local IsDefaultSearchbarSize = WindowInfo.SearchbarSize == UDim2.fromScale(1, 1)
+        local TopbarButtonCount = 0
+        if WindowInfo.MinimizeButton ~= false then TopbarButtonCount += 1 end
+        if WindowInfo.NotificationCenter ~= false then TopbarButtonCount += 1 end
         local TopbarRightInset = if TopbarButtonCount > 0 then 51 + 28 * TopbarButtonCount else 49
         local BottomBar
         local BottomLine
