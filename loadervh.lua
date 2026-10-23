@@ -1,5 +1,5 @@
 -- credits pngu
--- https://discord.gg/JD4s8wrvVH
+-- https://discord.gg/psWhrYWbq
 local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
@@ -5394,7 +5394,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
     end
     
     function Library:OpenDiscordInvite(Code: string?): boolean
-        local Invite = tostring(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
+        local Invite = tostring(Library.DiscordInvite or "https://discord.gg/psWhrYWbq")
         if typeof(Code) ~= "string" or Code == "" then
             Code = string.match(Invite, "([%w%-]+)/?$")
         end
@@ -6025,7 +6025,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
 			table.insert(State.Listeners, Paint)
 			Paint()
 			if Library.FetchCommunity then
-				local _, Code = ParseDiscordInvite(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
+				local _, Code = ParseDiscordInvite(Library.DiscordInvite or "https://discord.gg/psWhrYWbq")
 				Library.FetchCommunity(Code)
 			end
 		end
@@ -7136,7 +7136,7 @@ local AddonsUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main
     
         pcall(function()
             local function OpenCommunity()
-                local Invite = tostring(Library.DiscordInvite or "https://discord.gg/JD4s8wrvVH")
+                local Invite = tostring(Library.DiscordInvite or "https://discord.gg/psWhrYWbq")
                 Library:CopyToClipboard(Invite, "Discord invite copied")
                 local Code = string.match(Invite, "([%w%-]+)/?$")
                 if Code then
@@ -32828,7 +32828,7 @@ do
 	SaveManager = loadAddon("SaveManager.lua")
 	Options = Library.Options
 	Toggles = Library.Toggles
-	Discord = "https://discord.gg/JD4s8wrvVH"
+	Discord = "https://discord.gg/psWhrYWbq"
 	GameName = "Break and Steal an Egg"
 	LoaderScript = 'loadstring(game:HttpGet("' .. HubRepo .. 'Loader"))()'
 	local Env = getgenv()
