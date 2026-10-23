@@ -1,5 +1,620 @@
--- credits pngu
--- https://discord.gg/JD4s8wrvVH
+-- ═══════════════════════════════════════════════════════════════════════
+-- VRILZHUB KEY SYSTEM — ditambahkan di depan, tanpa ubah script asli
+-- Validasi pakai endpoint yang sama dengan ui_rideapet (16).lua
+-- ═══════════════════════════════════════════════════════════════════════
+do
+    local KEY_SYSTEM_URL = "https://key-system.vrilzwops.workers.dev"
+    local KEY_FILE = "vrilz_key.txt"
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer or Players.PlayerAdded:Wait()
+    local HttpService = game:GetService("HttpService")
+    local TweenService = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService")
+    local Lighting = game:GetService("Lighting")
+    local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+    local function getRequest()
+        return (syn and syn.request) or (http and http.request) or http_request or request
+    end
+
+    local function getEnv()
+        local ok, e = pcall(function() return getgenv and getgenv() or _G end)
+        return ok and type(e) == "table" and e or _G
+    end
+
+    local function getStableDeviceId()
+        local env = getEnv()
+        if type(env.VRILZ_DEVICE_ID) == "string" and #env.VRILZ_DEVICE_ID >= 8 then
+            return env.VRILZ_DEVICE_ID
+        end
+        if readfile and isfile then
+            local okFile, exists = pcall(isfile, "vrilz_device_id.txt")
+            if okFile and exists then
+                local okRead, content = pcall(readfile, "vrilz_device_id.txt")
+                if okRead and type(content) == "string" then
+                    content = content:gsub("^%s+", ""):gsub("%s+$", "")
+                    if #content >= 8 then
+                        env.VRILZ_DEVICE_ID = content
+                        return content
+                    end
+                end
+            end
+        end
+        local gen = nil
+        pcall(function() gen = HttpService:GenerateGUID(false) end)
+        if type(gen) ~= "string" or #gen < 8 then
+            gen = tostring(LocalPlayer.UserId) .. "-" .. tostring(game.PlaceId)
+        end
+        env.VRILZ_DEVICE_ID = gen
+        if writefile then pcall(writefile, "vrilz_device_id.txt", gen) end
+        return gen
+    end
+
+    local function loadSavedKey()
+        local env = getEnv()
+        if type(env.VRILZ_KEY) == "string" and env.VRILZ_KEY:gsub("%s+", "") ~= "" then
+            return env.VRILZ_KEY
+        end
+        if readfile and isfile then
+            local okFile, exists = pcall(isfile, KEY_FILE)
+            if okFile and exists then
+                local okRead, content = pcall(readfile, KEY_FILE)
+                if okRead and type(content) == "string" and content:gsub("%s+", "") ~= "" then
+                    return content
+                end
+            end
+        end
+        return nil
+    end
+
+    local function saveKey(key)
+        key = tostring(key or ""):gsub("^%s+", ""):gsub("%s+$", ""):upper()
+        if key == "" then return end
+        getEnv().VRILZ_KEY = key
+        if writefile then pcall(writefile, KEY_FILE, key) end
+    end
+
+    local function clearSavedKey()
+        getEnv().VRILZ_KEY = nil
+        if delfile and isfile then
+            local ok, exists = pcall(isfile, KEY_FILE)
+            if ok and exists then pcall(delfile, KEY_FILE) end
+        end
+    end
+
+    local function applyKeyInfo(data, key)
+        if type(data) ~= "table" then return end
+        local env = getEnv()
+        env.VRILZ_KeyValue = key
+        env.VRILZ_KeyType = tostring(data.type or data.key_type or "UNKNOWN"):upper()
+        env.VRILZ_KeyExpiresAt = tonumber(data.expires_at or data.expiry or 0) or 0
+    end
+
+    -- Endpoint /api/redeem — SAMA PERSIS dengan ui_rideapet (16).lua
+    local function verifyKeyWithServer(key)
+        key = tostring(key or ""):gsub("^%s+", ""):gsub("%s+$", ""):upper()
+        if key == "" then return false, "Please enter a key first." end
+        local payload = HttpService:JSONEncode({
+            username = LocalPlayer.Name,
+            key = key,
+            device_id = getStableDeviceId(),
+        })
+        local url = KEY_SYSTEM_URL:gsub("/$", "") .. "/api/redeem"
+        local ok, response = pcall(function()
+            local req = getRequest()
+            if req then
+                return req({
+                    Url = url, Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json", ["Accept"] = "application/json" },
+                    Body = payload,
+                })
+            end
+            return {
+                StatusCode = 200,
+                Body = HttpService:PostAsync(url, payload, Enum.HttpContentType.ApplicationJson, false, { ["Accept"] = "application/json" })
+            }
+        end)
+        if not ok or not response then return false, "Cannot connect to Key System." end
+        local status = tonumber(response.StatusCode or response.Status or 0) or 0
+        local body = response.Body or response.body or ""
+        local decodedOk, data = pcall(function() return HttpService:JSONDecode(body) end)
+        if decodedOk and type(data) == "table" then
+            if data.success == true then
+                return true, data.message or "Key valid.", data
+            end
+            local m = tostring(data.message or "Invalid key.")
+            if status > 0 and status ~= 200 then m = m .. " [HTTP " .. tostring(status) .. "]" end
+            return false, m, data
+        end
+        if status >= 200 and status < 300 then return false, "Invalid Key System response." end
+        return false, "Key System server error [HTTP " .. tostring(status) .. "]."
+    end
+
+    -- Endpoint /api/verify — untuk key yang sudah tersimpan (restore)
+    local function verifySavedKeyWithServer(key)
+        key = tostring(key or ""):gsub("^%s+", ""):gsub("%s+$", ""):upper()
+        if key == "" then return false, "Saved key is empty.", nil, false end
+        local payload = HttpService:JSONEncode({
+            username = LocalPlayer.Name,
+            key = key,
+            device_id = getStableDeviceId(),
+        })
+        local url = KEY_SYSTEM_URL:gsub("/$", "") .. "/api/verify"
+        local ok, response = pcall(function()
+            local req = getRequest()
+            if req then
+                return req({
+                    Url = url, Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json", ["Accept"] = "application/json" },
+                    Body = payload,
+                })
+            end
+            return {
+                StatusCode = 200,
+                Body = HttpService:PostAsync(url, payload, Enum.HttpContentType.ApplicationJson, false, { ["Accept"] = "application/json" })
+            }
+        end)
+        if not ok or not response then
+            return false, "Cannot verify saved key (network).", nil, true
+        end
+        local status = tonumber(response.StatusCode or response.Status or 0) or 0
+        local body = response.Body or response.body or ""
+        local decodedOk, data = pcall(function() return HttpService:JSONDecode(body) end)
+        if status >= 500 then
+            return false, "Key server error [HTTP " .. tostring(status) .. "]", nil, true
+        end
+        if not decodedOk or type(data) ~= "table" then
+            if status >= 200 and status < 300 then return false, "Invalid Key System response.", nil, true end
+            return false, "Invalid key.", nil, false
+        end
+        if data.success == true then
+            return true, data.message or "Key is still active.", data, false
+        end
+        local msg = tostring(data.message or "")
+        local low = msg:lower()
+        if low:find("network") or low:find("timeout") or low:find("connect")
+            or low:find("server") or low:find("unavailable") then
+            return false, msg, data, true
+        end
+        return false, msg ~= "" and msg or "Invalid key.", data, false
+    end
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- SKIP / BYPASS PREMIUM (Sabtu 19:50–23:59 WIB) — opsional
+    -- ═══════════════════════════════════════════════════════════════
+    local OWNER_USERID = 5126297278
+    local function isPremiumTimeNow()
+        if LocalPlayer.UserId == OWNER_USERID then return true end
+        local ok, result = pcall(function()
+            local wibTime = os.time() + 7 * 3600
+            local wibDate = os.date("!*t", wibTime)
+            if wibDate.wday ~= 7 then return false end
+            local totalMin = wibDate.hour * 60 + wibDate.min
+            return totalMin >= 1190 and totalMin <= 1439
+        end)
+        return ok and result
+    end
+
+    local function isRealPremiumKey(keyType)
+        if not keyType then return false end
+        local kt = tostring(keyType):upper()
+        return kt == "PREMIUM" or kt == "OWNER" or kt == "VIP"
+    end
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- AUTO-RESTORE: kalau sudah pernah valid → langsung pass
+    -- ═══════════════════════════════════════════════════════════════
+    local savedKey = loadSavedKey()
+    if savedKey then
+        local valid, msg, data, isNetwork = verifySavedKeyWithServer(savedKey)
+        if valid and data then
+            applyKeyInfo(data, savedKey)
+            local kt = getEnv().VRILZ_KeyType
+            print("[VrilzHub] ✅ Auto-restore key valid:", kt)
+            _G.VRILZ_KEY_VALIDATED = true
+            _G.VRILZ_KeyValidated = true
+            do return end -- lanjut ke script asli
+        elseif isNetwork then
+            print("[VrilzHub] ⚠️ Verify network error, tetap pakai key tersimpan")
+            applyKeyInfo(data or {}, savedKey)
+            getEnv().VRILZ_KeyType = getEnv().VRILZ_KeyType or "PREMIUM"
+            _G.VRILZ_KEY_VALIDATED = true
+            do return end
+        else
+            print("[VrilzHub] ❌ Saved key invalid:", msg)
+            clearSavedKey()
+        end
+    end
+
+    -- ═══════════════════════════════════════════════════════════════
+    -- KEY UI — port dari Arqel (ui_rideapet) tapi tema VrilzHub biru
+    -- ═══════════════════════════════════════════════════════════════
+    local Theme = {
+        Accent = Color3.fromRGB(132, 176, 255),
+        AccentHover = Color3.fromRGB(90, 140, 230),
+        Background = Color3.fromRGB(6, 7, 11),
+        Header = Color3.fromRGB(19, 21, 30),
+        Input = Color3.fromRGB(28, 30, 42),
+        Text = Color3.fromRGB(245, 247, 255),
+        TextDim = Color3.fromRGB(120, 125, 145),
+        Success = Color3.fromRGB(50, 205, 110),
+        Error = Color3.fromRGB(245, 70, 90),
+        Warning = Color3.fromRGB(255, 180, 50),
+        Divider = Color3.fromRGB(45, 52, 75),
+    }
+    local DiscordLink = "https://discord.gg/JD4s8wrvVH"
+
+    local coreGui = (gethui and gethui()) or game:GetService("CoreGui")
+    local oldUI = coreGui:FindFirstChild("VRILZHUB_KeyGate")
+    if oldUI then oldUI:Destroy() end
+
+    -- Blur
+    local blur = Lighting:FindFirstChild("VRILZHUB_KS_Blur")
+    if blur then blur:Destroy() end
+    blur = Instance.new("BlurEffect")
+    blur.Name = "VRILZHUB_KS_Blur"
+    blur.Size = 0
+    blur.Parent = Lighting
+    TweenService:Create(blur, TweenInfo.new(0.4), { Size = 24 }):Play()
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "VRILZHUB_KeyGate"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.DisplayOrder = 9999
+    gui.Parent = coreGui
+
+    local vp = workspace.CurrentCamera.ViewportSize
+    local winW = isMobile and math.floor(vp.X * 0.78) or 420
+    local winH = isMobile and math.floor(vp.Y * 0.55) or 380
+
+    local main = Instance.new("Frame")
+    main.Name = "Main"
+    main.AnchorPoint = Vector2.new(0.5, 0.5)
+    main.Position = UDim2.fromScale(0.5, 1.5)
+    main.Size = UDim2.fromOffset(winW, winH)
+    main.BackgroundColor3 = Theme.Background
+    main.BorderSizePixel = 0
+    main.Parent = gui
+    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
+
+    local stroke = Instance.new("UIStroke", main)
+    stroke.Color = Theme.Accent
+    stroke.Thickness = 2
+    stroke.Transparency = 0.3
+
+    -- Header
+    local header = Instance.new("Frame")
+    header.Size = UDim2.new(1, 0, 0, 52)
+    header.BackgroundColor3 = Theme.Header
+    header.BorderSizePixel = 0
+    header.Active = true
+    header.Parent = main
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 14)
+    local hFix = Instance.new("Frame")
+    hFix.Size = UDim2.new(1, 0, 0, 10)
+    hFix.Position = UDim2.new(0, 0, 1, -10)
+    hFix.BackgroundColor3 = Theme.Header
+    hFix.BorderSizePixel = 0
+    hFix.Parent = header
+    local hLine = Instance.new("Frame")
+    hLine.Size = UDim2.new(1, 0, 0, 1)
+    hLine.Position = UDim2.new(0, 0, 1, 0)
+    hLine.BackgroundColor3 = Theme.Accent
+    hLine.BackgroundTransparency = 0.5
+    hLine.BorderSizePixel = 0
+    hLine.Parent = header
+
+    local logo = Instance.new("TextLabel")
+    logo.Size = UDim2.fromOffset(32, 32)
+    logo.Position = UDim2.new(0, 12, 0.5, 0)
+    logo.AnchorPoint = Vector2.new(0, 0.5)
+    logo.BackgroundColor3 = Theme.Accent
+    logo.Text = "VH"
+    logo.TextColor3 = Color3.new(1, 1, 1)
+    logo.Font = Enum.Font.GothamBlack
+    logo.TextSize = 15
+    logo.Parent = header
+    Instance.new("UICorner", logo).CornerRadius = UDim.new(0, 8)
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -60, 1, 0)
+    title.Position = UDim2.fromOffset(52, 0)
+    title.BackgroundTransparency = 1
+    title.Text = "VRILZHUB · Break & Steal an Egg"
+    title.TextColor3 = Theme.Text
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = isMobile and 13 or 15
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = header
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.fromOffset(28, 28)
+    closeBtn.Position = UDim2.new(1, -10, 0.5, 0)
+    closeBtn.AnchorPoint = Vector2.new(1, 0.5)
+    closeBtn.BackgroundColor3 = Theme.Input
+    closeBtn.Text = "×"
+    closeBtn.TextColor3 = Theme.TextDim
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 18
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Parent = header
+    Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(1, 0)
+
+    closeBtn.MouseButton1Click:Connect(function()
+        TweenService:Create(blur, TweenInfo.new(0.3), { Size = 0 }):Play()
+        TweenService:Create(main, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+            Position = UDim2.fromScale(0.5, 1.5),
+        }):Play()
+        task.wait(0.4)
+        if blur then blur:Destroy() end
+        gui:Destroy()
+    end)
+
+    -- Status
+    local statusFrame = Instance.new("Frame")
+    statusFrame.Size = UDim2.new(1, -24, 0, isMobile and 52 or 60)
+    statusFrame.Position = UDim2.new(0.5, 0, 0, 62)
+    statusFrame.AnchorPoint = Vector2.new(0.5, 0)
+    statusFrame.BackgroundColor3 = Theme.Input
+    statusFrame.BorderSizePixel = 0
+    statusFrame.ClipsDescendants = true
+    statusFrame.Parent = main
+    Instance.new("UICorner", statusFrame).CornerRadius = UDim.new(0, 8)
+    local statusStroke = Instance.new("UIStroke", statusFrame)
+    statusStroke.Color = Theme.Accent
+    statusStroke.Thickness = 1
+    statusStroke.Transparency = 0.7
+
+    local statusIcon = Instance.new("TextLabel")
+    statusIcon.Size = UDim2.fromOffset(32, 32)
+    statusIcon.Position = UDim2.new(0, 12, 0.5, 0)
+    statusIcon.AnchorPoint = Vector2.new(0, 0.5)
+    statusIcon.BackgroundColor3 = Theme.Divider
+    statusIcon.Text = "🔒"
+    statusIcon.TextSize = 15
+    statusIcon.Font = Enum.Font.GothamBold
+    statusIcon.Parent = statusFrame
+    Instance.new("UICorner", statusIcon).CornerRadius = UDim.new(1, 0)
+
+    local statusLabel = Instance.new("TextLabel")
+    statusLabel.Size = UDim2.new(1, -60, 1, 0)
+    statusLabel.Position = UDim2.fromOffset(56, 0)
+    statusLabel.BackgroundTransparency = 1
+    statusLabel.Text = "Enter your key to unlock"
+    statusLabel.TextColor3 = Theme.TextDim
+    statusLabel.Font = Enum.Font.GothamSemibold
+    statusLabel.TextSize = isMobile and 11 or 13
+    statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    statusLabel.TextWrapped = true
+    statusLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    statusLabel.Parent = statusFrame
+
+    -- Input
+    local inputFrame = Instance.new("Frame")
+    inputFrame.Size = UDim2.new(1, -24, 0, isMobile and 42 or 46)
+    inputFrame.Position = UDim2.new(0.5, 0, 0, 62 + (isMobile and 60 or 68))
+    inputFrame.AnchorPoint = Vector2.new(0.5, 0)
+    inputFrame.BackgroundColor3 = Theme.Input
+    inputFrame.BorderSizePixel = 0
+    inputFrame.ClipsDescendants = true
+    inputFrame.Parent = main
+    Instance.new("UICorner", inputFrame).CornerRadius = UDim.new(0, 8)
+    local inputStroke = Instance.new("UIStroke", inputFrame)
+    inputStroke.Color = Theme.Accent
+    inputStroke.Thickness = 1
+    inputStroke.Transparency = 0.5
+
+    local textBox = Instance.new("TextBox")
+    textBox.Size = UDim2.new(1, -24, 1, 0)
+    textBox.Position = UDim2.new(0.5, 0, 0.5, 0)
+    textBox.AnchorPoint = Vector2.new(0.5, 0.5)
+    textBox.BackgroundTransparency = 1
+    textBox.Text = ""
+    textBox.TextColor3 = Theme.Text
+    textBox.PlaceholderText = "Paste your key here..."
+    textBox.PlaceholderColor3 = Theme.TextDim
+    textBox.TextSize = isMobile and 12 or 14
+    textBox.Font = Enum.Font.GothamSemibold
+    textBox.ClearTextOnFocus = false
+    textBox.TextTruncate = Enum.TextTruncate.AtEnd
+    textBox.TextXAlignment = Enum.TextXAlignment.Left
+    textBox.Parent = inputFrame
+    textBox.Focused:Connect(function() TweenService:Create(inputStroke, TweenInfo.new(0.15), { Transparency = 0.2 }):Play() end)
+    textBox.FocusLost:Connect(function() TweenService:Create(inputStroke, TweenInfo.new(0.15), { Transparency = 0.5 }):Play() end)
+
+    -- Buttons
+    local btnY = 62 + (isMobile and 60 or 68) + (isMobile and 42 or 46) + 14
+
+    local function makeBtn(text, primary, y)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.5, -18, 0, isMobile and 38 or 42)
+        btn.Position = UDim2.new(primary and 0.5 or 0, primary and 6 or 12, 0, y)
+        btn.AnchorPoint = primary and Vector2.new(0.5, 0) or Vector2.new(0, 0)
+        btn.BackgroundColor3 = primary and Theme.Accent or Theme.Input
+        btn.Text = text
+        btn.TextColor3 = primary and Theme.Background or Theme.Text
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = isMobile and 11 or 13
+        btn.BorderSizePixel = 0
+        btn.AutoButtonColor = false
+        btn.Parent = main
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+        local s = Instance.new("UIStroke", btn)
+        s.Color = primary and Theme.AccentHover or Theme.Divider
+        s.Thickness = 1
+        s.Transparency = primary and 0.4 or 0.6
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {
+                BackgroundColor3 = primary and Theme.AccentHover or Theme.Divider,
+            }):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {
+                BackgroundColor3 = primary and Theme.Accent or Theme.Input,
+            }):Play()
+        end)
+        return btn
+    end
+
+    local getKeyBtn = makeBtn("Get Key", false, btnY)
+    local redeemBtn = makeBtn("Redeem Key", true, btnY)
+
+    -- Discord button (kecil di bawah)
+    local discordBtn = Instance.new("TextButton")
+    discordBtn.Size = UDim2.new(0.5, -18, 0, 28)
+    discordBtn.Position = UDim2.new(0.5, 0, 0, btnY + (isMobile and 46 or 50))
+    discordBtn.AnchorPoint = Vector2.new(0.5, 0)
+    discordBtn.BackgroundTransparency = 1
+    discordBtn.Text = "💬 Join Discord"
+    discordBtn.TextColor3 = Theme.Accent
+    discordBtn.Font = Enum.Font.GothamBold
+    discordBtn.TextSize = isMobile and 10 or 11
+    discordBtn.Parent = main
+    discordBtn.MouseButton1Click:Connect(function()
+        pcall(setclipboard, DiscordLink)
+        statusLabel.Text = "Discord link copied!"
+        statusLabel.TextColor3 = Theme.Success
+        task.delay(2, function()
+            if statusLabel and statusLabel.Parent then
+                statusLabel.Text = "Enter your key to unlock"
+                statusLabel.TextColor3 = Theme.TextDim
+            end
+        end)
+    end)
+
+    -- Dragging
+    local dragging, dragStart, startPos
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = main.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch) then
+            local d = input.Position - dragStart
+            main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    -- Set status helper
+    local spinning = nil
+    local function setStatus(state, customText)
+        if spinning then
+            pcall(function() spinning:Disconnect() end)
+            spinning = nil
+            statusIcon.Rotation = 0
+        end
+        local color, icon, text
+        if state == "verifying" then
+            color, icon, text = Theme.Accent, "⏳", customText or "Verifying key..."
+            spinning = game:GetService("RunService").Heartbeat:Connect(function(dt)
+                if statusIcon and statusIcon.Parent then
+                    statusIcon.Rotation = (statusIcon.Rotation + dt * 360) % 360
+                end
+            end)
+        elseif state == "success" then
+            color, icon, text = Theme.Success, "✅", customText or "Access Granted!"
+        elseif state == "error" then
+            color, icon, text = Theme.Error, "❌", customText or "Invalid Key"
+        else
+            color, icon, text = Theme.TextDim, "🔒", customText or "Enter your key to unlock"
+        end
+        TweenService:Create(statusLabel, TweenInfo.new(0.25), { TextColor3 = color }):Play()
+        statusLabel.Text = text
+        statusIcon.Text = icon
+    end
+
+    -- Redeem handler
+    local function doRedeem()
+        local key = textBox.Text:gsub("%s+", "")
+        if key == "" then
+            setStatus("error", "Please enter a key first")
+            return
+        end
+        setStatus("verifying")
+        redeemBtn.Active = false
+        task.wait(0.15)
+        local valid, message, data = verifyKeyWithServer(key)
+        redeemBtn.Active = true
+        if valid then
+            applyKeyInfo(data, key)
+            saveKey(key)
+            setStatus("success", "Access Granted! Loading hub...")
+            _G.VRILZ_KEY_VALIDATED = true
+            _G.VRILZ_KeyValidated = true
+            task.wait(0.8)
+            -- Fade out & blur off
+            TweenService:Create(blur, TweenInfo.new(0.4), { Size = 0 }):Play()
+            TweenService:Create(main, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Position = UDim2.fromScale(0.5, 1.5),
+            }):Play()
+            task.wait(0.5)
+            if blur then blur:Destroy() end
+            gui:Destroy()
+            -- Script asli lanjut karena gate di atas sudah lolos
+            do return end
+        else
+            setStatus("error", message or "Invalid key")
+        end
+    end
+
+    redeemBtn.MouseButton1Click:Connect(doRedeem)
+    textBox.FocusLost:Connect(function(enter) if enter then doRedeem() end end)
+
+    getKeyBtn.MouseButton1Click:Connect(function()
+        pcall(setclipboard, KEY_SYSTEM_URL)
+        setStatus("verifying", "Key site link copied! Open in browser")
+        task.wait(1.5)
+        if statusLabel and statusLabel.Parent then
+            setStatus("idle")
+        end
+    end)
+
+    -- Slide in
+    TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.fromScale(0.5, 0.5),
+    }):Play()
+
+    -- Script TIDAK lanjut — return dari blok do
+    -- Kalau user tutup tanpa valid, UI hilang dan script berhenti di sini
+    -- (script asli tidak akan dieksekusi sampai key valid)
+    local validated = false
+    task.spawn(function()
+        while gui.Parent do
+            if _G.VRILZ_KEY_VALIDATED then
+                validated = true
+                break
+            end
+            task.wait(0.1)
+        end
+    end)
+    -- Tunggu sampai user valid atau tutup
+    while gui.Parent do
+        task.wait(0.1)
+    end
+    if not _G.VRILZ_KEY_VALIDATED then
+        -- User tutup tanpa valid → stop total
+        return
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════════════════
+-- GATE: kalau key belum valid, script asli TIDAK dijalankan
+-- ═══════════════════════════════════════════════════════════════════════
+if not _G.VRILZ_KEY_VALIDATED then
+    return
+end
 local Boot = getgenv()
 if Boot.CorvusBooting and os.clock() - Boot.CorvusBooting < 25 then
 	pcall(function()
