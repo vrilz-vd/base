@@ -20654,18 +20654,19 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
     
         if WindowInfo.Icon then
             if WindowInfo.Icon == "vhpetir" then
-    local holder, label = MakeVHLogo(MiniCard, UDim2.fromOffset(26, 26), {
+    local vhHolder, vhLabel = Library.MakeVHLogo(MiniCard, UDim2.fromOffset(26, 26), {
         Color = Color3.fromRGB(255, 40, 40),
         Pulse = true,
-        BgTransparency = 0.05,  -- background lebih pekat biar kontras
+        BgTransparency = 0.05,
     })
-    holder.AnchorPoint = Vector2.new(0, 0.5)
-    holder.Position = UDim2.new(0, 12, 0, 24)
-    MiniIcon = holder
-    -- Pastikan label VH selalu kelihatan di atas petir
-    if label then
-        label.ZIndex = 10
-        label.TextStrokeTransparency = 0.2
+    if vhHolder then
+        vhHolder.AnchorPoint = Vector2.new(0, 0.5)
+        vhHolder.Position = UDim2.new(0, 12, 0, 24)
+        MiniIcon = vhHolder
+    end
+    if vhLabel then
+        vhLabel.ZIndex = 10
+        vhLabel.TextStrokeTransparency = 0.2
     end
 else
                 local Icon = Library:GetCustomIcon(WindowInfo.Icon)
