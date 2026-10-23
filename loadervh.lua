@@ -40284,29 +40284,57 @@ end)("0b1b060606494c40161f06100c1d1658161c0e4013061c5c140a101e1a1c081c5d47404655
 		local ok, response = pcall(fn, options)
 		return if ok then response else nil
 	end
-	local function validWebhook(url)
-		return type(url) == "string"
-			and (
-					url:find("^https://discord%.com/api/webhooks/")
-					or url:find("^https://discordapp%.com/api/webhooks/")
-					or url:find("^https://canary%.discord%.com/api/webhooks/")
-					or url:find("^https://ptb%.discord%.com/api/webhooks/")
-				)
-				~= nil
-	end
-	local function postWebhook(url, payload)
-		if not validWebhook(url) then
-			return false, 0
-		end
-		local response = httpRequest({
-			Url = url,
-			Method = "POST",
-			Headers = { ["Content-Type"] = "application/json" },
-			Body = HttpService:JSONEncode(payload),
-		})
-		local code = response and tonumber(response.StatusCode) or 0
-		return code >= 200 and code < 300, code
-	end
+	local function trimText(s)
+    return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+end
+
+-- Terima semua format URL webhook Discord:
+--   https://discord.com/api/webhooks/ID/TOKEN
+--   https://discord.com/api/v10/webhooks/ID/TOKEN
+--   https://discordapp.com/api/webhooks/ID/TOKEN
+--   https://canary.discord.com/api/webhooks/ID/TOKEN
+--   https://ptb.discord.com/api/webhooks/ID/TOKEN
+local function validWebhook(url)
+    if type(url) ~= "string" then
+        return false
+    end
+    url = trimText(url)
+    if #url < 30 then
+        return false
+    end
+    local ok = url:find("^https://[%w%.%-]*discord[%w%.%-]*%.com/api/")
+    if not ok then
+        return false
+    end
+    return url:find("/webhooks/", 1, true) ~= nil
+end
+	HookBox:AddButton({
+    Text = "Send test",
+    Func = function()
+        local url = trimText(Options.WebhookUrl and Options.WebhookUrl.Value)
+        if not validWebhook(url) then
+            notify(
+                "Webhook",
+                if url == ""
+                    then "Paste your Discord webhook URL first (klik kotaknya, paste, lalu klik di luar kotak)"
+                    else "URL tidak valid. Format harus https://discord.com/api/webhooks/ID/TOKEN",
+                6
+            )
+            return
+        end
+        task.spawn(function()
+            local embed = reportEmbed("\u{2726}  Test from Corvus")
+            embed.author = { name = GameName }
+            embed.footer = { text = "Corvus  \u{00B7}  " .. GameName }
+            local ok, code = postWebhook(url, {
+                username = "Corvus",
+                allowed_mentions = { parse = {} },
+                embeds = { embed },
+            })
+            notify("Webhook", if ok then "Test sent, cek channel Discord-mu" else "Discord answered " .. tostring(code), 5)
+        end)
+    end,
+})
 	local GameLink = "https://www.roblox.com/games/" .. tostring(game.PlaceId)
 	local function gameField()
 		return { name = "Game", value = "[" .. GameName .. "](" .. GameLink .. ")", inline = true }
@@ -40408,7 +40436,7 @@ end)("0b1b060606494c40161f06100c1d1658161c0e4013061c5c140a101e1a1c081c5d47404655
 		while alive() do
 			task.wait(2.5)
 			pcall(function()
-				local url = Options.WebhookUrl and Options.WebhookUrl.Value
+				local url = trimText(Options.WebhookUrl and Options.WebhookUrl.Value)
 				local enabled = hookOn() and validWebhook(url)
 				local every = (Options.WebhookReport and Options.WebhookReport.Value or 0) * 60
 				if enabled and every > 0 and os.clock() - lastReport >= every then
