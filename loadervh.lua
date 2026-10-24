@@ -21438,7 +21438,7 @@ end
         local RestoringTo = nil
         local MinimizeTween = nil
         local MinimizeHidden = {}
-        local MiniWidth, MiniHeight = 300, 78
+        local MiniWidth, MiniHeight = 84, 84
         local MiniCard
         local MiniSubtitle
         local MiniFooter
@@ -21482,6 +21482,7 @@ end
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 1),
                 Visible = false,
+			    Active = false,
                 ZIndex = 6,
                 Parent = MainFrame,
             })
@@ -21492,15 +21493,27 @@ end
                         local MiniIcon
 if WindowInfo.Icon == "vhpetir" then
     -- ═══ VH Logo inline (tidak butuh helper) ═══
-    local vhHolder = New("Frame", {
-        AnchorPoint = Vector2.new(0, 0.5),
-        BackgroundColor3 = Color3.fromRGB(20, 8, 8),
-        BackgroundTransparency = 0.15,
-        ClipsDescendants = true,
-        Position = UDim2.new(0, 12, 0, 24),
-        Size = UDim2.fromOffset(26, 26),
-        Parent = MiniCard,
-    })
+    local vhHolder = New("TextButton", {
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundColor3 = Color3.fromRGB(20, 8, 8),
+    BackgroundTransparency = 0.15,
+    ClipsDescendants = true,
+    Position = UDim2.fromScale(0.5, 0.5),
+    Size = UDim2.fromOffset(64, 64),
+    Text = "",
+    AutoButtonColor = false,
+    Active = true,
+    Parent = MiniCard,
+})
+-- Klik logo VH untuk restore window utama
+vhHolder.MouseButton1Click:Connect(function()
+    task.defer(function()
+        if Library.Window and Library.Window.SetMinimized then
+            Library.Window:SetMinimized(false)
+        end
+    end)
+end)
+				
     New("UICorner", {
         CornerRadius = UDim.new(1, 0),
         Parent = vhHolder,
@@ -21612,12 +21625,12 @@ if WindowInfo.Icon == "vhpetir" then
     MiniIcon = vhHolder
 else
     MiniIcon = New("ImageLabel", {
-        AnchorPoint = Vector2.new(0, 0.5),
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 12, 0, 24),
-        Size = UDim2.fromOffset(26, 26),
-        Parent = MiniCard,
-    })
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundTransparency = 1,
+    Position = UDim2.fromScale(0.5, 0.5),
+    Size = UDim2.fromOffset(56, 56),
+    Parent = MiniCard,
+})
     New("UICorner", {
         CornerRadius = UDim.new(0, 6),
         Parent = MiniIcon,
@@ -21632,79 +21645,84 @@ else
 end
 Window.MiniIcon = MiniIcon
     
-            New("TextLabel", {
-                BackgroundTransparency = 1,
-                FontFace = GetBoldFont,
-                Position = UDim2.fromOffset(48, 9),
-                Size = UDim2.new(1, -112, 0, 17),
-                Text = WindowInfo.Title,
-                TextSize = 15,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = MiniCard,
-            })
-            MiniSubtitle = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(48, 26),
-                Size = UDim2.new(1, -112, 0, 14),
-                Text = "",
-                TextSize = 12,
-                TextTransparency = 0.5,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = MiniCard,
-            })
+            local MiniTitleLabel = New("TextLabel", {
+    BackgroundTransparency = 1,
+    FontFace = GetBoldFont,
+    Position = UDim2.fromOffset(48, 9),
+    Size = UDim2.new(1, -112, 0, 17),
+    Text = WindowInfo.Title,
+    TextSize = 15,
+    TextTruncate = Enum.TextTruncate.AtEnd,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Visible = false,
+    Parent = MiniCard,
+})
+MiniSubtitle = New("TextLabel", {
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(48, 26),
+    Size = UDim2.new(1, -112, 0, 14),
+    Text = "",
+    TextSize = 12,
+    TextTransparency = 0.5,
+    TextTruncate = Enum.TextTruncate.AtEnd,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Visible = false,
+    Parent = MiniCard,
+})
     
             local function MiniButton(Icon, Offset, Rotation)
-                local Button = New("ImageButton", {
-                    AnchorPoint = Vector2.new(1, 0.5),
-                    BackgroundTransparency = 1,
-                    ImageColor3 = "FontColor",
-                    ImageTransparency = 0.45,
-                    Position = UDim2.new(1, -Offset, 0, 24),
-                    Rotation = Rotation or 0,
-                    Size = UDim2.fromOffset(17, 17),
-                    Parent = MiniCard,
-                })
-                if Icon then
-                    Library:ApplyLucideIcon(Button, Icon, Rotation)
-                end
-                Library:AddIconHover(Button, Button, { Scale = 1.15, Transparency = 0, RestTransparency = 0.45 })
-                return Button
-            end
-    
-            MiniExpand = MiniButton(ArrowIcon, 14, 180)
-            MiniBell = MiniButton(BellIcon, 42)
-            MiniBellBadge = New("Frame", {
-                AnchorPoint = Vector2.new(0.5, 0.5),
-                BackgroundColor3 = "AccentColor",
-                Position = UDim2.new(1, -1, 0, 2),
-                Size = UDim2.fromOffset(7, 7),
-                Visible = false,
-                ZIndex = MiniBell.ZIndex + 1,
-                Parent = MiniBell,
-            })
-            New("UICorner", {
-                CornerRadius = UDim.new(1, 0),
-                Parent = MiniBellBadge,
-            })
-    
-            Library:MakeLine(MiniCard, {
-                Position = UDim2.fromOffset(0, 48),
-                Size = UDim2.new(1, 0, 0, 1),
-            })
-    
-            MiniFooter = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(12, 49),
-                Size = UDim2.new(1, -24, 0, 29),
-                Text = "",
-                TextSize = 12,
-                TextTransparency = 0.5,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Parent = MiniCard,
-            })
+    local Button = New("ImageButton", {
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundTransparency = 1,
+        ImageColor3 = "FontColor",
+        ImageTransparency = 0.45,
+        Position = UDim2.new(1, -Offset, 0, 24),
+        Rotation = Rotation or 0,
+        Size = UDim2.fromOffset(17, 17),
+        Visible = false, -- hidden: only the logo shows when minimized
+        Parent = MiniCard,
+    })
+    if Icon then
+        Library:ApplyLucideIcon(Button, Icon, Rotation)
+    end
+    Library:AddIconHover(Button, Button, { Scale = 1.15, Transparency = 0, RestTransparency = 0.45 })
+    return Button
+end
+
+MiniExpand = MiniButton(ArrowIcon, 14, 180)
+MiniBell = MiniButton(BellIcon, 42)
+MiniBellBadge = New("Frame", {
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    BackgroundColor3 = "AccentColor",
+    Position = UDim2.new(1, -1, 0, 2),
+    Size = UDim2.fromOffset(7, 7),
+    Visible = false,
+    ZIndex = MiniBell.ZIndex + 1,
+    Parent = MiniBell,
+})
+New("UICorner", {
+    CornerRadius = UDim.new(1, 0),
+    Parent = MiniBellBadge,
+})
+
+local MiniDivider = Library:MakeLine(MiniCard, {
+    Position = UDim2.fromOffset(0, 48),
+    Size = UDim2.new(1, 0, 0, 1),
+})
+MiniDivider.Visible = false
+
+MiniFooter = New("TextLabel", {
+    BackgroundTransparency = 1,
+    Position = UDim2.fromOffset(12, 49),
+    Size = UDim2.new(1, -24, 0, 29),
+    Text = "",
+    TextSize = 12,
+    TextTransparency = 0.5,
+    TextTruncate = Enum.TextTruncate.AtEnd,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Visible = false, -- only the logo shows when minimized
+    Parent = MiniCard,
+})
     
             Library:MakeDraggable(MainFrame, MiniCard, false, true, WindowSnapConfig)
             MiniCard:SetAttribute("Scale", 1)
@@ -21728,7 +21746,7 @@ Window.MiniIcon = MiniIcon
                 MiniFooter.Text = Footer
             end
     
-            MiniBellBadge.Visible = Library.UnreadNotifications > 0
+            MiniBellBadge.Visible = false
         end
         Window.RefreshMini = RefreshMini
     
@@ -21793,24 +21811,25 @@ Window.MiniIcon = MiniIcon
                     MinimizeTween:Play()
     
                     local Tween = MinimizeTween
-                    task.delay(0.1, function()
-                        if Minimized and MinimizeTween == Tween then
-                            MiniCard.Visible = true
-                            Window.MiniScale.Scale = 0.94
-                            TweenService:Create(Window.MiniScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                                Scale = 1,
-                            }):Play()
-                        end
-                    end)
+                    task.delay(0.18, function()
+    if Minimized and MinimizeTween == Tween then
+        MiniCard.Visible = true
+        Window.MiniScale.Scale = 0.94
+        TweenService:Create(Window.MiniScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Scale = 1,
+        }):Play()
+    end
+end)
                 else
                     MainFrame.Size = Target
                     MiniCard.Visible = true
                 end
             else
-                MiniCard.Visible = false
-                if Library.NotificationCenter and Library.NotificationCenter.Open then
-                    Library.NotificationCenter:SetOpen(false)
-                end
+    MiniCard.Visible = false
+    -- pastikan semua elemen mini card tersembunyi saat restore
+    if MiniSubtitle then MiniSubtitle.Visible = false end
+    if MiniFooter then MiniFooter.Visible = false end
+    if MiniBellBadge then MiniBellBadge.Visible = false end
     
                 local Target = MinimizeRestoreSize or WindowInfo.Size
                 RestoringTo = Target
