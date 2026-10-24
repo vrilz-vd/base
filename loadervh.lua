@@ -21767,86 +21767,130 @@ MiniFooter = New("TextLabel", {
         return
     end
 
-    -- 🔧 FIX: kalau tween sebelumnya masih jalan, selesaikan dulu
+    -- cancel tween yang sedang jalan tanpa memaksa size
     if MinimizeTween then
         StopTween(MinimizeTween, true)
         MinimizeTween = nil
-        -- paksa state konsisten
-        if Minimized then
-            MainFrame.Size = UDim2.fromOffset(MiniWidth, MiniHeight)
-            if MiniCard then MiniCard.Visible = true end
-        else
-            MainFrame.Size = MinimizeRestoreSize or WindowInfo.Size
-        end
     end
 
     Minimized = State
-    
-            if MinimizeTween then
-                StopTween(MinimizeTween, true)
-                MinimizeTween = nil
+
+    local Animate = Library.IconAnimations ~= false
+    local Info = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    if Animate and Window.PlayMinimizeComet then
+        Window.PlayMinimizeComet(State)
+    end
+
+    if State then
+        if CurrentMenu then CurrentMenu:Close() end
+        if Library.ActivePicker then Library.ActivePicker:Close(true) end
+        if Library.NotificationCenter and Library.NotificationCenter.Open then
+            Library.NotificationCenter:SetOpen(false)
+        end
+        HideTabTooltipSafe()
+
+        if not MinimizeRestoreSize then
+            local cur = MainFrame.Size
+            if cur.X.Offset <= MiniWidth + 4 and cur.Y.Offset <= MiniHeight + 4 then
+                MinimizeRestoreSize = WindowInfo.Size
+            else
+                MinimizeRestoreSize = RestoringTo or cur
             end
-    
-            local Animate = Library.IconAnimations ~= false
-            local Info = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-            if Animate and Window.PlayMinimizeComet then
-                Window.PlayMinimizeComet(State)
+        end
+
+        if #MinimizeHidden == 0 then
+            for _, Gui in { TopBar, TopLine, DividerLine, Tabs, Container, BottomBackground, BottomBar, BottomLine } do
+                if Gui and Gui.Visible then
+                    Gui.Visible = false
+                    table.insert(MinimizeHidden, Gui)
+                end
             end
-    
-            if State then
-                if CurrentMenu then
-                    CurrentMenu:Close()
+        else
+            for _, Gui in MinimizeHidden do
+                Gui.Visible = false
+            end
+        end
+
+        RefreshMini()
+
+        local Target = UDim2.fromOffset(MiniWidth, MiniHeight)
+        if Animate then
+            MinimizeTween = TweenService:Create(MainFrame, Info, { Size = Target })
+            MinimizeTween:Play()
+
+            local Tween = MinimizeTween
+            Tween.Completed:Once(function()
+                if Minimized and MinimizeTween == Tween then
+                    MinimizeTween = nil
+                    MiniCard.Visible = true
+                    Window.MiniScale.Scale = 0.94
+                    TweenService:Create(Window.MiniScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                        Scale = 1,
+                    }):Play()
                 end
-                if Library.ActivePicker then
-                    Library.ActivePicker:Close(true)
-                end
-                if Library.NotificationCenter and Library.NotificationCenter.Open then
-                    Library.NotificationCenter:SetOpen(false)
-                end
-                HideTabTooltipSafe()
-    
-                if not MinimizeRestoreSize then
-    local cur = MainFrame.Size
-    -- kalau size sekarang = mini size, pakai WindowInfo.Size sebagai fallback
-    if cur.X.Offset <= MiniWidth + 4 and cur.Y.Offset <= MiniHeight + 4 then
-        MinimizeRestoreSize = WindowInfo.Size
+            end)
+        else
+            MainFrame.Size = Target
+            MiniCard.Visible = true
+        end
     else
-        MinimizeRestoreSize = RestoringTo or cur
+        MiniCard.Visible = false
+        if MiniSubtitle then MiniSubtitle.Visible = false end
+        if MiniFooter then MiniFooter.Visible = false end
+        if MiniBellBadge then MiniBellBadge.Visible = false end
+        if Window.MiniScale then
+            Window.MiniScale.Scale = 1
+        end
+
+        local Target = MinimizeRestoreSize or WindowInfo.Size
+        RestoringTo = Target
+        MinimizeRestoreSize = nil
+
+        local function Restore()
+            if Minimized then return end
+            RestoringTo = nil
+
+            -- tunggu 1 frame agar layout Roblox reflow dulu
+            RunService.RenderStepped:Wait()
+
+            for _, Gui in MinimizeHidden do
+                if Gui and Gui.Parent then
+                    Gui.Visible = true
+                end
+            end
+            table.clear(MinimizeHidden)
+
+            if Tabs then
+                Tabs.Size = UDim2.new(0, Window:GetSidebarWidth(), 1, -70)
+            end
+            if Container then
+                Container.Size = UDim2.new(1, -Window:GetSidebarWidth() - 1, 1, -70)
+            end
+
+            for _, Tab in Library.Tabs do
+                if Tab.Resize then
+                    Tab:Resize(true)
+                end
+            end
+        end
+
+        if Animate then
+            local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
+            MinimizeTween = Tween
+            Tween:Play()
+
+            Tween.Completed:Once(function(state)
+                if MinimizeTween == Tween and state == Enum.PlaybackState.Completed then
+                    MinimizeTween = nil
+                    Restore()
+                end
+            end)
+        else
+            MainFrame.Size = Target
+            Restore()
+        end
     end
 end
-    
-                if #MinimizeHidden == 0 then
-                    for _, Gui in { TopBar, TopLine, DividerLine, Tabs, Container, BottomBackground, BottomBar, BottomLine } do
-                        if Gui and Gui.Visible then
-                            Gui.Visible = false
-                            table.insert(MinimizeHidden, Gui)
-                        end
-                    end
-                else
-                    for _, Gui in MinimizeHidden do
-                        Gui.Visible = false
-                    end
-                end
-    
-                RefreshMini()
-    
-                local Target = UDim2.fromOffset(MiniWidth, MiniHeight)
-                if Animate then
-                    MinimizeTween = TweenService:Create(MainFrame, Info, { Size = Target })
-                    MinimizeTween:Play()
-    
-                    local Tween = MinimizeTween
-                    task.delay(0.18, function()
-    if Minimized and MinimizeTween == Tween then
-        MiniCard.Visible = true
-        Window.MiniScale.Scale = 0.94
-        TweenService:Create(Window.MiniScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Scale = 1,
-        }):Play()
-    end
-end)
-                else
-                    MainFrame.Size = Target
                     MiniCard.Visible = true
                 end
             else
@@ -21891,20 +21935,21 @@ end)
         end
     end
 
-    if Animate then
-        local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
-        MinimizeTween = Tween
-        Tween:Play()
+if Animate then
+    local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
+    MinimizeTween = Tween
+    Tween:Play()
 
-        -- 🔧 FIX: tunggu tween SIZE selesai dulu, baru Restore
-        task.delay(Info.Time, function()
-            if MinimizeTween == Tween then
-                Restore()
-            end
-        end)
-    else
-        Restore()
-    end
+    -- tunggu tween selesai ATAU cancel kalau ada yang menggantikan
+    Tween.Completed:Once(function(state)
+        if MinimizeTween == Tween and state == Enum.PlaybackState.Completed then
+            MinimizeTween = nil
+            Restore()
+        end
+    end)
+else
+    Restore()
+end
 end
     
         function Window:ToggleMinimized()
