@@ -20236,97 +20236,6 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
         Main.Position = UDim2.new(0.5, -math.floor(Size.X * Scale / 2), 0.5, -math.floor(Size.Y * Scale / 2))
     end
 
- -- ===== VH Lightning Logo (vector, no PNG) =====
-    local function MakeVHLogo(parent, size, opts)
-        opts = opts or {}
-        size = size or UDim2.fromOffset(28, 28)
-        local color = opts.Color or Color3.fromRGB(255, 40, 40)
-        local textColor = opts.TextColor or Color3.fromRGB(255, 255, 255)
-
-        local Holder = New("Frame", {
-            BackgroundTransparency = 1,
-            Size = size,
-            Parent = parent,
-        })
-
-        local Bg = New("Frame", {
-            BackgroundColor3 = Color3.fromRGB(20, 8, 8),
-            BackgroundTransparency = opts.BgTransparency or 0.15,
-            Size = UDim2.fromScale(1, 1),
-            Parent = Holder,
-        })
-        New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = Bg })
-        New("UIStroke", {
-            Color = color,
-            Thickness = 1.5,
-            Transparency = 0.35,
-            Parent = Bg,
-        })
-
-        local Bolt = New("Frame", {
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            BackgroundTransparency = 1,
-            Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromScale(0.7, 0.8),
-            Parent = Holder,
-        })
-
-        local function Shard(sx, sy, rot, len, th)
-            local s = New("Frame", {
-                AnchorPoint = Vector2.new(0, 0.5),
-                BackgroundColor3 = color,
-                BorderSizePixel = 0,
-                Position = UDim2.fromScale(sx, sy),
-                Rotation = rot,
-                Size = UDim2.new(0, len, 0, th),
-                Parent = Bolt,
-            })
-            New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = s })
-            return s
-        end
-
-        Shard(0.18, 0.05, 28, 14, 4)
-        Shard(0.30, 0.28, 62, 12, 4)
-        Shard(0.42, 0.42, 12, 16, 4)
-        Shard(0.30, 0.62, 70, 12, 4)
-        Shard(0.18, 0.82, 32, 14, 4)
-
-        local Label = New("TextLabel", {
-            BackgroundTransparency = 1,
-            FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
-            Size = UDim2.fromScale(1, 1),
-            Text = "VH",
-            TextColor3 = textColor,
-            TextSize = 0,
-            TextScaled = true,
-            TextStrokeTransparency = 0,
-            TextStrokeColor3 = Color3.fromRGB(80, 0, 0),
-            ZIndex = 5,
-            Parent = Holder,
-        })
-        New("UITextSizeConstraint", { MaxTextSize = 40, MinTextSize = 6, Parent = Label })
-
-        if opts.Pulse ~= false and Library.IconAnimations ~= false then
-            task.spawn(function()
-                while Holder.Parent and not Library.Unloaded do
-                    local T = TweenService:Create(Bg, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                        BackgroundColor3 = Color3.fromRGB(40, 6, 6),
-                    })
-                    T:Play()
-                    task.wait(0.9)
-                    if not Holder.Parent then break end
-                    TweenService:Create(Bg, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                        BackgroundColor3 = Color3.fromRGB(20, 8, 8),
-                    }):Play()
-                    task.wait(0.9)
-                end
-            end)
-        end
-
-        return Holder, Label, Bolt
-    end
-    Library.MakeVHLogo = MakeVHLogo
-
     function Library:CreateWindow(WindowInfo)
         WindowInfo = Library:Validate(WindowInfo, Templates.Window)
         Library.Title = WindowInfo.Title
@@ -21874,84 +21783,24 @@ MiniFooter = New("TextLabel", {
             end
         end
 
-        if Animate then
-            local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
-            MinimizeTween = Tween
-            Tween:Play()
+            if Animate then
+        local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
+        MinimizeTween = Tween
+        Tween:Play()
 
-            Tween.Completed:Once(function(state)
-                if MinimizeTween == Tween and state == Enum.PlaybackState.Completed then
-                    MinimizeTween = nil
-                    Restore()
-                end
-            end)
-        else
-            MainFrame.Size = Target
-            Restore()
-        end
-    end
-end
-                    MiniCard.Visible = true
-                end
-            else
-    MiniCard.Visible = false
-    if MiniSubtitle then MiniSubtitle.Visible = false end
-    if MiniFooter then MiniFooter.Visible = false end
-    if MiniBellBadge then MiniBellBadge.Visible = false end
-    
-    -- Reset mini card scale biar tidak ikut animasi lama
-    if Window.MiniScale then
-        Window.MiniScale.Scale = 1
-    end
-
-    local Target = MinimizeRestoreSize or WindowInfo.Size
-    RestoringTo = Target
-    MinimizeRestoreSize = nil
-
-    local function Restore()
-        if Minimized then return end
-        RestoringTo = nil
-
-        -- 🔧 FIX: resize MainFrame dulu, baru tampilkan children
-        MainFrame.Size = Target
-
-        for _, Gui in MinimizeHidden do
-            Gui.Visible = true
-        end
-        table.clear(MinimizeHidden)
-
-        -- 🔧 FIX: paksa refresh layout setelah visible
-        if Tabs then
-            Tabs.Size = UDim2.new(0, Window:GetSidebarWidth(), 1, -70)
-        end
-        if Container then
-            Container.Size = UDim2.new(1, -Window:GetSidebarWidth() - 1, 1, -70)
-        end
-
-        for _, Tab in Library.Tabs do
-            if Tab.Resize then
-                Tab:Resize(true)
+        Tween.Completed:Once(function(state)
+            if MinimizeTween == Tween and state == Enum.PlaybackState.Completed then
+                MinimizeTween = nil
+                Restore()
             end
-        end
+        end)
+    else
+        -- 🔧 FIX #1 + #2: set size DULU sebelum Restore() di branch non-animate
+        MainFrame.Size = Target
+        Restore()
     end
-
-if Animate then
-    local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
-    MinimizeTween = Tween
-    Tween:Play()
-
-    -- tunggu tween selesai ATAU cancel kalau ada yang menggantikan
-    Tween.Completed:Once(function(state)
-        if MinimizeTween == Tween and state == Enum.PlaybackState.Completed then
-            MinimizeTween = nil
-            Restore()
-        end
-    end)
-else
-    Restore()
 end
-end
-    
+
         function Window:ToggleMinimized()
             Window:SetMinimized(not Minimized)
         end
@@ -26623,9 +26472,14 @@ end
                 Description = Info.Description or "Profile, session and community",
             })
     
-            local Profile = Tab:AddLeftGroupbox("Profile", "user-round")
+                        local Profile = Tab:AddLeftGroupbox("Profile", "user-round")
             if Info.AvatarMode ~= "off" then
-            	Profile:AddAvatarCard({ Height = Info.AvatarHeight or 96, Mode = Info.AvatarMode })
+                -- 🔧 FIX #8: default ke "2D" jika nil, supaya tidak coba BuildModel()
+                -- saat karakter belum load (bisa gagal / lambat).
+                Profile:AddAvatarCard({
+                    Height = Info.AvatarHeight or 96,
+                    Mode = if typeof(Info.AvatarMode) == "string" then Info.AvatarMode else "2D",
+                })
             end
     
             local AccountAge = tonumber(LocalPlayer.AccountAge) or 0
@@ -36841,18 +36695,13 @@ end
 -- blocked by fire() outside Hell (PvP stays excluded).
 N.Hell = { joinAt = -1e9, swings = 0, essenceHits = 0, status = "-", nextSwing = 0, enteredAt = nil, logAt = -1e9, tokensAt = nil, fights = 0, probe = { swings = 0, drops = 0, said = false, pending = {} }, bossSeenAt = nil, retreatUntil = 0 }
 do
-	local H = N.Hell
-	local function tokens()
-		return tonumber(LocalPlayer:GetAttribute("DemonTokens")) or 0
-	end
-	function N.hellPortal()
-		local node = workspace
-		for _, name in ipairs({ "Build", "ZoneBuilds", "Zone7", "JoinHell" }) do
-			node = node and node:FindFirstChild(name)
-		end
-		local tp = node and node:FindFirstChild("TP", true)
-		return if tp and tp:IsA("BasePart") then tp else nil
-	end
+    local H = N.Hell
+    local function tokens()
+        return tonumber(LocalPlayer:GetAttribute("DemonTokens")) or 0
+    end
+    -- 🔧 FIX #3: JANGAN override N.hellPortal — versi p04 sudah punya cache.
+    -- Jika butuh akses cepat, panggil N.hellPortal() (versi p04 dengan cache).
+    -- (Fungsi lokal ini dihapus; pemanggil di dalam blok ini tetap memakai N.hellPortal().)
 	function N.hellBoss()
 		for _, model in ipairs(N.tagged("HellBoss")) do
 			if model.Parent then
@@ -37543,10 +37392,11 @@ do
 		elseif P.seen[zone] then
 			out = { { v = P.seen[zone], p = 1 } }
 		end
-		table.sort(out, function(a, b)
+				table.sort(out, function(a, b)
 			return a.v > b.v
 		end)
 		P.distCache[key] = out
+		P.distCacheSize = (P.distCacheSize or 0) + 1   -- 🔧 FIX #7
 		return out
 	end
 	-- Expected income added by one animal when the weakest placed one earns `worst` (0 while the plot has room).
@@ -38061,27 +37911,31 @@ do
 		return top * (1 + 0.01 * 1 + 0.0025 * 3) * (if lucky then (P.luckyFactor(zone)) else 1)
 	end
 	-- Value per second of breaking one egg: expected gain of its animal over the time it takes (egg choice by zone and luck).
-	function P.eggRate(info, distance)
-		local state = P.lastState
-		if not state then
-			return -info.hits
-		end
-		local worst = if #state.placed < state.slots then 0 else (state.placed[#state.placed] or 0)
-		local dist = P.dist(info.zone, info.luck)
-		local g = P.gain(dist, worst) + P.mean(dist) * 1e-6
-		if info.lucky then
-			-- a bigger hatch: every row of the zone table times the lucky factor, priced against the weakest placed one
-			local factor = P.luckyFactor(info.zone)
-			local lucky = 0
-			for _, row in ipairs(dist) do
-				lucky += row.p * math.max(row.v * factor - worst, 0)
-			end
-			g = lucky + P.mean(dist) * factor * 1e-6
-		end
-		local walk = if state.teleport then 1e6 else math.max(N.modeSpeed(nil, false), 1)
-		local seconds = info.hits * state.pace + P.EggGap + (distance or 0) / walk
-		return math.min(g / math.max(seconds, 0.1), 1e14)
-	end
+	    function P.eggRate(info, distance)
+        local state = P.lastState
+        if not state then
+            return -info.hits
+        end
+        local worst = if #state.placed < state.slots then 0 else (state.placed[#state.placed] or 0)
+        local dist = P.dist(info.zone, info.luck)
+        local g = P.gain(dist, worst) + P.mean(dist) * 1e-6
+        if info.lucky then
+            local factor = P.luckyFactor(info.zone)
+            local lucky = 0
+            for _, row in ipairs(dist) do
+                lucky += row.p * math.max(row.v * factor - worst, 0)
+            end
+            g = lucky + P.mean(dist) * factor * 1e-6
+        end
+                -- 🔧 FIX #4b: pool kosong (config belum load) → fallback non-negatif,
+        -- egg paling mudah (hits paling sedikit) menang, tetap diurutkan natural.
+        if g <= 0 and #dist == 0 then
+            g = 1 / math.max(info.hits, 1)
+        end
+        local walk = if state.teleport then 1e6 else math.max(N.modeSpeed(nil, false), 1)
+        local seconds = info.hits * state.pace + P.EggGap + (distance or 0) / walk
+        return math.min(g / math.max(seconds, 0.1), 1e14)
+    end
 	-- Why nothing is on the buy list: every upgrade maxed, or the best one that does not pay back inside the horizon.
 	-- Zone hysteresis: (zone to farm, note for the DECIDE line, egg part to leave). A switch needs +15 % value; an egg in
 	-- progress in the current zone is finished unless what the new zone adds during the rest of it beats its own animal.
@@ -38149,12 +38003,17 @@ do
 		end
 		return seconds .. "s"
 	end
-	function P.update(force)
+		function P.update(force)
 		if not force and os.clock() - P.at < 4 then
 			return
 		end
 		P.at = os.clock()
-		P.distCache = {}
+		-- 🔧 FIX #7: hanya reset cache distribusi jika memang perlu (force / cache terlalu besar).
+		-- Reset penuh setiap 4 dtk membuat cache tidak berguna dan boros CPU.
+		if force or (P.distCacheSize or 0) > 64 then
+			P.distCache = {}
+			P.distCacheSize = 0
+		end
 		P.observe()
 		local horizon = P.horizon()
 		local state = P.state()
@@ -41165,7 +41024,7 @@ do
 					return "Going to zone " .. index
 				end,
 			})
-			Library:AddCommand({
+						Library:AddCommand({
 				Name = "mode",
 				Aliases = { "move" },
 				Args = "<walk/fast/teleport>",
@@ -41177,7 +41036,15 @@ do
 					if not pick then
 						return "Mode is " .. N.moveMode() .. ". Use: mode walk, mode fast or mode teleport"
 					end
-					Options.MoveMode:SetValue(pick)
+					-- 🔧 FIX #6: cek nil sebelum SetValue (UI bisa gagal build)
+					local option = Options.MoveMode
+					if not option then
+						return "Movement menu is not loaded yet"
+					end
+					local ok = pcall(option.SetValue, option, pick)
+					if not ok then
+						return "Could not set the movement mode"
+					end
 					return "Mode set to " .. pick
 				end,
 			})
