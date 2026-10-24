@@ -20236,6 +20236,97 @@ CorvusLoadTimes.community = CorvusLoadTimes.community or (os.clock() - Community
         Main.Position = UDim2.new(0.5, -math.floor(Size.X * Scale / 2), 0.5, -math.floor(Size.Y * Scale / 2))
     end
 
+ -- ===== VH Lightning Logo (vector, no PNG) =====
+    local function MakeVHLogo(parent, size, opts)
+        opts = opts or {}
+        size = size or UDim2.fromOffset(28, 28)
+        local color = opts.Color or Color3.fromRGB(255, 40, 40)
+        local textColor = opts.TextColor or Color3.fromRGB(255, 255, 255)
+
+        local Holder = New("Frame", {
+            BackgroundTransparency = 1,
+            Size = size,
+            Parent = parent,
+        })
+
+        local Bg = New("Frame", {
+            BackgroundColor3 = Color3.fromRGB(20, 8, 8),
+            BackgroundTransparency = opts.BgTransparency or 0.15,
+            Size = UDim2.fromScale(1, 1),
+            Parent = Holder,
+        })
+        New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = Bg })
+        New("UIStroke", {
+            Color = color,
+            Thickness = 1.5,
+            Transparency = 0.35,
+            Parent = Bg,
+        })
+
+        local Bolt = New("Frame", {
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundTransparency = 1,
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromScale(0.7, 0.8),
+            Parent = Holder,
+        })
+
+        local function Shard(sx, sy, rot, len, th)
+            local s = New("Frame", {
+                AnchorPoint = Vector2.new(0, 0.5),
+                BackgroundColor3 = color,
+                BorderSizePixel = 0,
+                Position = UDim2.fromScale(sx, sy),
+                Rotation = rot,
+                Size = UDim2.new(0, len, 0, th),
+                Parent = Bolt,
+            })
+            New("UICorner", { CornerRadius = UDim.new(1, 0), Parent = s })
+            return s
+        end
+
+        Shard(0.18, 0.05, 28, 14, 4)
+        Shard(0.30, 0.28, 62, 12, 4)
+        Shard(0.42, 0.42, 12, 16, 4)
+        Shard(0.30, 0.62, 70, 12, 4)
+        Shard(0.18, 0.82, 32, 14, 4)
+
+        local Label = New("TextLabel", {
+            BackgroundTransparency = 1,
+            FontFace = Font.new("rbxasset://fonts/families/BuilderSans.json", Enum.FontWeight.Bold),
+            Size = UDim2.fromScale(1, 1),
+            Text = "VH",
+            TextColor3 = textColor,
+            TextSize = 0,
+            TextScaled = true,
+            TextStrokeTransparency = 0,
+            TextStrokeColor3 = Color3.fromRGB(80, 0, 0),
+            ZIndex = 5,
+            Parent = Holder,
+        })
+        New("UITextSizeConstraint", { MaxTextSize = 40, MinTextSize = 6, Parent = Label })
+
+        if opts.Pulse ~= false and Library.IconAnimations ~= false then
+            task.spawn(function()
+                while Holder.Parent and not Library.Unloaded do
+                    local T = TweenService:Create(Bg, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                        BackgroundColor3 = Color3.fromRGB(40, 6, 6),
+                    })
+                    T:Play()
+                    task.wait(0.9)
+                    if not Holder.Parent then break end
+                    TweenService:Create(Bg, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                        BackgroundColor3 = Color3.fromRGB(20, 8, 8),
+                    }):Play()
+                    task.wait(0.9)
+                end
+            end)
+        end
+
+        return Holder, Label, Bolt
+    end
+    Library.MakeVHLogo = MakeVHLogo
+
     function Library:CreateWindow(WindowInfo)
         WindowInfo = Library:Validate(WindowInfo, Templates.Window)
         Library.Title = WindowInfo.Title
@@ -21347,7 +21438,7 @@ end
         local RestoringTo = nil
         local MinimizeTween = nil
         local MinimizeHidden = {}
-        local MiniWidth, MiniHeight = 84, 84
+        local MiniWidth, MiniHeight = 300, 78
         local MiniCard
         local MiniSubtitle
         local MiniFooter
@@ -21391,7 +21482,6 @@ end
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 1),
                 Visible = false,
-			    Active = false,
                 ZIndex = 6,
                 Parent = MainFrame,
             })
@@ -21402,34 +21492,15 @@ end
                         local MiniIcon
 if WindowInfo.Icon == "vhpetir" then
     -- ═══ VH Logo inline (tidak butuh helper) ═══
-    local vhHolder = New("TextButton", {
-    AnchorPoint = Vector2.new(0.5, 0.5),
-    BackgroundColor3 = Color3.fromRGB(20, 8, 8),
-    BackgroundTransparency = 0.15,
-    ClipsDescendants = true,
-    Position = UDim2.fromScale(0.5, 0.5),
-    Size = UDim2.fromOffset(64, 64),
-    Text = "",
-    AutoButtonColor = false,
-    Active = true,
-    Parent = MiniCard,
-})
--- Klik logo VH untuk restore window utama
-vhHolder.MouseButton1Click:Connect(function()
-    -- 🔧 FIX: cegah spam-click / click saat tween masih jalan
-    if not Library.Window or not Library.Window.SetMinimized then
-        return
-    end
-    if Library.Window.IsMinimized and not Library.Window:IsMinimized() then
-        return -- sudah restore, abaikan
-    end
-    task.defer(function()
-        if Library.Window and Library.Window.SetMinimized then
-            Library.Window:SetMinimized(false)
-        end
-    end)
-end)
-				
+    local vhHolder = New("Frame", {
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundColor3 = Color3.fromRGB(20, 8, 8),
+        BackgroundTransparency = 0.15,
+        ClipsDescendants = true,
+        Position = UDim2.new(0, 12, 0, 24),
+        Size = UDim2.fromOffset(26, 26),
+        Parent = MiniCard,
+    })
     New("UICorner", {
         CornerRadius = UDim.new(1, 0),
         Parent = vhHolder,
@@ -21541,12 +21612,12 @@ end)
     MiniIcon = vhHolder
 else
     MiniIcon = New("ImageLabel", {
-    AnchorPoint = Vector2.new(0.5, 0.5),
-    BackgroundTransparency = 1,
-    Position = UDim2.fromScale(0.5, 0.5),
-    Size = UDim2.fromOffset(56, 56),
-    Parent = MiniCard,
-})
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 24),
+        Size = UDim2.fromOffset(26, 26),
+        Parent = MiniCard,
+    })
     New("UICorner", {
         CornerRadius = UDim.new(0, 6),
         Parent = MiniIcon,
@@ -21561,84 +21632,79 @@ else
 end
 Window.MiniIcon = MiniIcon
     
-            local MiniTitleLabel = New("TextLabel", {
-    BackgroundTransparency = 1,
-    FontFace = GetBoldFont,
-    Position = UDim2.fromOffset(48, 9),
-    Size = UDim2.new(1, -112, 0, 17),
-    Text = WindowInfo.Title,
-    TextSize = 15,
-    TextTruncate = Enum.TextTruncate.AtEnd,
-    TextXAlignment = Enum.TextXAlignment.Left,
-    Visible = false,
-    Parent = MiniCard,
-})
-MiniSubtitle = New("TextLabel", {
-    BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(48, 26),
-    Size = UDim2.new(1, -112, 0, 14),
-    Text = "",
-    TextSize = 12,
-    TextTransparency = 0.5,
-    TextTruncate = Enum.TextTruncate.AtEnd,
-    TextXAlignment = Enum.TextXAlignment.Left,
-    Visible = false,
-    Parent = MiniCard,
-})
+            New("TextLabel", {
+                BackgroundTransparency = 1,
+                FontFace = GetBoldFont,
+                Position = UDim2.fromOffset(48, 9),
+                Size = UDim2.new(1, -112, 0, 17),
+                Text = WindowInfo.Title,
+                TextSize = 15,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = MiniCard,
+            })
+            MiniSubtitle = New("TextLabel", {
+                BackgroundTransparency = 1,
+                Position = UDim2.fromOffset(48, 26),
+                Size = UDim2.new(1, -112, 0, 14),
+                Text = "",
+                TextSize = 12,
+                TextTransparency = 0.5,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = MiniCard,
+            })
     
             local function MiniButton(Icon, Offset, Rotation)
-    local Button = New("ImageButton", {
-        AnchorPoint = Vector2.new(1, 0.5),
-        BackgroundTransparency = 1,
-        ImageColor3 = "FontColor",
-        ImageTransparency = 0.45,
-        Position = UDim2.new(1, -Offset, 0, 24),
-        Rotation = Rotation or 0,
-        Size = UDim2.fromOffset(17, 17),
-        Visible = false, -- hidden: only the logo shows when minimized
-        Parent = MiniCard,
-    })
-    if Icon then
-        Library:ApplyLucideIcon(Button, Icon, Rotation)
-    end
-    Library:AddIconHover(Button, Button, { Scale = 1.15, Transparency = 0, RestTransparency = 0.45 })
-    return Button
-end
-
-MiniExpand = MiniButton(ArrowIcon, 14, 180)
-MiniBell = MiniButton(BellIcon, 42)
-MiniBellBadge = New("Frame", {
-    AnchorPoint = Vector2.new(0.5, 0.5),
-    BackgroundColor3 = "AccentColor",
-    Position = UDim2.new(1, -1, 0, 2),
-    Size = UDim2.fromOffset(7, 7),
-    Visible = false,
-    ZIndex = MiniBell.ZIndex + 1,
-    Parent = MiniBell,
-})
-New("UICorner", {
-    CornerRadius = UDim.new(1, 0),
-    Parent = MiniBellBadge,
-})
-
-local MiniDivider = Library:MakeLine(MiniCard, {
-    Position = UDim2.fromOffset(0, 48),
-    Size = UDim2.new(1, 0, 0, 1),
-})
-MiniDivider.Visible = false
-
-MiniFooter = New("TextLabel", {
-    BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(12, 49),
-    Size = UDim2.new(1, -24, 0, 29),
-    Text = "",
-    TextSize = 12,
-    TextTransparency = 0.5,
-    TextTruncate = Enum.TextTruncate.AtEnd,
-    TextXAlignment = Enum.TextXAlignment.Left,
-    Visible = false, -- only the logo shows when minimized
-    Parent = MiniCard,
-})
+                local Button = New("ImageButton", {
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    BackgroundTransparency = 1,
+                    ImageColor3 = "FontColor",
+                    ImageTransparency = 0.45,
+                    Position = UDim2.new(1, -Offset, 0, 24),
+                    Rotation = Rotation or 0,
+                    Size = UDim2.fromOffset(17, 17),
+                    Parent = MiniCard,
+                })
+                if Icon then
+                    Library:ApplyLucideIcon(Button, Icon, Rotation)
+                end
+                Library:AddIconHover(Button, Button, { Scale = 1.15, Transparency = 0, RestTransparency = 0.45 })
+                return Button
+            end
+    
+            MiniExpand = MiniButton(ArrowIcon, 14, 180)
+            MiniBell = MiniButton(BellIcon, 42)
+            MiniBellBadge = New("Frame", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BackgroundColor3 = "AccentColor",
+                Position = UDim2.new(1, -1, 0, 2),
+                Size = UDim2.fromOffset(7, 7),
+                Visible = false,
+                ZIndex = MiniBell.ZIndex + 1,
+                Parent = MiniBell,
+            })
+            New("UICorner", {
+                CornerRadius = UDim.new(1, 0),
+                Parent = MiniBellBadge,
+            })
+    
+            Library:MakeLine(MiniCard, {
+                Position = UDim2.fromOffset(0, 48),
+                Size = UDim2.new(1, 0, 0, 1),
+            })
+    
+            MiniFooter = New("TextLabel", {
+                BackgroundTransparency = 1,
+                Position = UDim2.fromOffset(12, 49),
+                Size = UDim2.new(1, -24, 0, 29),
+                Text = "",
+                TextSize = 12,
+                TextTransparency = 0.5,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Parent = MiniCard,
+            })
     
             Library:MakeDraggable(MainFrame, MiniCard, false, true, WindowSnapConfig)
             MiniCard:SetAttribute("Scale", 1)
@@ -21662,7 +21728,7 @@ MiniFooter = New("TextLabel", {
                 MiniFooter.Text = Footer
             end
     
-            MiniBellBadge.Visible = false
+            MiniBellBadge.Visible = Library.UnreadNotifications > 0
         end
         Window.RefreshMini = RefreshMini
     
@@ -21670,137 +21736,121 @@ MiniFooter = New("TextLabel", {
             return Minimized
         end
     
-   function Window:SetMinimized(State: boolean)
-    State = State == true
-    if Minimized == State then
-        return
-    end
-
-    -- cancel tween yang sedang jalan tanpa memaksa size
-    if MinimizeTween then
-        StopTween(MinimizeTween, true)
-        MinimizeTween = nil
-    end
-
-    Minimized = State
-
-    local Animate = Library.IconAnimations ~= false
-    local Info = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    if Animate and Window.PlayMinimizeComet then
-        Window.PlayMinimizeComet(State)
-    end
-
-    if State then
-        if CurrentMenu then CurrentMenu:Close() end
-        if Library.ActivePicker then Library.ActivePicker:Close(true) end
-        if Library.NotificationCenter and Library.NotificationCenter.Open then
-            Library.NotificationCenter:SetOpen(false)
-        end
-        HideTabTooltipSafe()
-
-        if not MinimizeRestoreSize then
-            local cur = MainFrame.Size
-            if cur.X.Offset <= MiniWidth + 4 and cur.Y.Offset <= MiniHeight + 4 then
-                MinimizeRestoreSize = WindowInfo.Size
-            else
-                MinimizeRestoreSize = RestoringTo or cur
+        function Window:SetMinimized(State: boolean)
+            State = State == true
+            if Minimized == State then
+                return
             end
-        end
-
-        if #MinimizeHidden == 0 then
-            for _, Gui in { TopBar, TopLine, DividerLine, Tabs, Container, BottomBackground, BottomBar, BottomLine } do
-                if Gui and Gui.Visible then
-                    Gui.Visible = false
-                    table.insert(MinimizeHidden, Gui)
-                end
-            end
-        else
-            for _, Gui in MinimizeHidden do
-                Gui.Visible = false
-            end
-        end
-
-        RefreshMini()
-
-        local Target = UDim2.fromOffset(MiniWidth, MiniHeight)
-        if Animate then
-            MinimizeTween = TweenService:Create(MainFrame, Info, { Size = Target })
-            MinimizeTween:Play()
-
-            local Tween = MinimizeTween
-            Tween.Completed:Once(function()
-                if Minimized and MinimizeTween == Tween then
-                    MinimizeTween = nil
-                    MiniCard.Visible = true
-                    Window.MiniScale.Scale = 0.94
-                    TweenService:Create(Window.MiniScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                        Scale = 1,
-                    }):Play()
-                end
-            end)
-        else
-            MainFrame.Size = Target
-            MiniCard.Visible = true
-        end
-    else
-        MiniCard.Visible = false
-        if MiniSubtitle then MiniSubtitle.Visible = false end
-        if MiniFooter then MiniFooter.Visible = false end
-        if MiniBellBadge then MiniBellBadge.Visible = false end
-        if Window.MiniScale then
-            Window.MiniScale.Scale = 1
-        end
-
-        local Target = MinimizeRestoreSize or WindowInfo.Size
-        RestoringTo = Target
-        MinimizeRestoreSize = nil
-
-        local function Restore()
-            if Minimized then return end
-            RestoringTo = nil
-
-            -- tunggu 1 frame agar layout Roblox reflow dulu
-            RunService.RenderStepped:Wait()
-
-            for _, Gui in MinimizeHidden do
-                if Gui and Gui.Parent then
-                    Gui.Visible = true
-                end
-            end
-            table.clear(MinimizeHidden)
-
-            if Tabs then
-                Tabs.Size = UDim2.new(0, Window:GetSidebarWidth(), 1, -70)
-            end
-            if Container then
-                Container.Size = UDim2.new(1, -Window:GetSidebarWidth() - 1, 1, -70)
-            end
-
-            for _, Tab in Library.Tabs do
-                if Tab.Resize then
-                    Tab:Resize(true)
-                end
-            end
-        end
-
-            if Animate then
-        local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
-        MinimizeTween = Tween
-        Tween:Play()
-
-        Tween.Completed:Once(function(state)
-            if MinimizeTween == Tween and state == Enum.PlaybackState.Completed then
+    
+            Minimized = State
+    
+            if MinimizeTween then
+                StopTween(MinimizeTween, true)
                 MinimizeTween = nil
-                Restore()
             end
-        end)
-    else
-        -- 🔧 FIX #1 + #2: set size DULU sebelum Restore() di branch non-animate
-        MainFrame.Size = Target
-        Restore()
-    end
-end
-
+    
+            local Animate = Library.IconAnimations ~= false
+            local Info = TweenInfo.new(0.32, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+            if Animate and Window.PlayMinimizeComet then
+                Window.PlayMinimizeComet(State)
+            end
+    
+            if State then
+                if CurrentMenu then
+                    CurrentMenu:Close()
+                end
+                if Library.ActivePicker then
+                    Library.ActivePicker:Close(true)
+                end
+                if Library.NotificationCenter and Library.NotificationCenter.Open then
+                    Library.NotificationCenter:SetOpen(false)
+                end
+                HideTabTooltipSafe()
+    
+                if not MinimizeRestoreSize then
+                    MinimizeRestoreSize = RestoringTo or MainFrame.Size
+                end
+                RestoringTo = nil
+    
+                if #MinimizeHidden == 0 then
+                    for _, Gui in { TopBar, TopLine, DividerLine, Tabs, Container, BottomBackground, BottomBar, BottomLine } do
+                        if Gui and Gui.Visible then
+                            Gui.Visible = false
+                            table.insert(MinimizeHidden, Gui)
+                        end
+                    end
+                else
+                    for _, Gui in MinimizeHidden do
+                        Gui.Visible = false
+                    end
+                end
+    
+                RefreshMini()
+    
+                local Target = UDim2.fromOffset(MiniWidth, MiniHeight)
+                if Animate then
+                    MinimizeTween = TweenService:Create(MainFrame, Info, { Size = Target })
+                    MinimizeTween:Play()
+    
+                    local Tween = MinimizeTween
+                    task.delay(0.1, function()
+                        if Minimized and MinimizeTween == Tween then
+                            MiniCard.Visible = true
+                            Window.MiniScale.Scale = 0.94
+                            TweenService:Create(Window.MiniScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                                Scale = 1,
+                            }):Play()
+                        end
+                    end)
+                else
+                    MainFrame.Size = Target
+                    MiniCard.Visible = true
+                end
+            else
+                MiniCard.Visible = false
+                if Library.NotificationCenter and Library.NotificationCenter.Open then
+                    Library.NotificationCenter:SetOpen(false)
+                end
+    
+                local Target = MinimizeRestoreSize or WindowInfo.Size
+                RestoringTo = Target
+                MinimizeRestoreSize = nil
+    
+                local function Restore()
+                    if Minimized then
+                        return
+                    end
+                    RestoringTo = nil
+    
+                    for _, Gui in MinimizeHidden do
+                        Gui.Visible = true
+                    end
+                    table.clear(MinimizeHidden)
+    
+                    for _, Tab in Library.Tabs do
+                        if Tab.Resize then
+                            Tab:Resize(true)
+                        end
+                    end
+                end
+    
+                if Animate then
+                    local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
+                    MinimizeTween = Tween
+                    Tween:Play()
+    
+                    task.delay(Info.Time * 0.55, function()
+                        if MinimizeTween == Tween then
+                            Restore()
+                        end
+                    end)
+                else
+                    MainFrame.Size = Target
+                    Restore()
+                end
+            end
+        end
+    
         function Window:ToggleMinimized()
             Window:SetMinimized(not Minimized)
         end
@@ -26472,14 +26522,9 @@ end
                 Description = Info.Description or "Profile, session and community",
             })
     
-                        local Profile = Tab:AddLeftGroupbox("Profile", "user-round")
+            local Profile = Tab:AddLeftGroupbox("Profile", "user-round")
             if Info.AvatarMode ~= "off" then
-                -- 🔧 FIX #8: default ke "2D" jika nil, supaya tidak coba BuildModel()
-                -- saat karakter belum load (bisa gagal / lambat).
-                Profile:AddAvatarCard({
-                    Height = Info.AvatarHeight or 96,
-                    Mode = if typeof(Info.AvatarMode) == "string" then Info.AvatarMode else "2D",
-                })
+            	Profile:AddAvatarCard({ Height = Info.AvatarHeight or 96, Mode = Info.AvatarMode })
             end
     
             local AccountAge = tonumber(LocalPlayer.AccountAge) or 0
@@ -36695,13 +36740,18 @@ end
 -- blocked by fire() outside Hell (PvP stays excluded).
 N.Hell = { joinAt = -1e9, swings = 0, essenceHits = 0, status = "-", nextSwing = 0, enteredAt = nil, logAt = -1e9, tokensAt = nil, fights = 0, probe = { swings = 0, drops = 0, said = false, pending = {} }, bossSeenAt = nil, retreatUntil = 0 }
 do
-    local H = N.Hell
-    local function tokens()
-        return tonumber(LocalPlayer:GetAttribute("DemonTokens")) or 0
-    end
-    -- 🔧 FIX #3: JANGAN override N.hellPortal — versi p04 sudah punya cache.
-    -- Jika butuh akses cepat, panggil N.hellPortal() (versi p04 dengan cache).
-    -- (Fungsi lokal ini dihapus; pemanggil di dalam blok ini tetap memakai N.hellPortal().)
+	local H = N.Hell
+	local function tokens()
+		return tonumber(LocalPlayer:GetAttribute("DemonTokens")) or 0
+	end
+	function N.hellPortal()
+		local node = workspace
+		for _, name in ipairs({ "Build", "ZoneBuilds", "Zone7", "JoinHell" }) do
+			node = node and node:FindFirstChild(name)
+		end
+		local tp = node and node:FindFirstChild("TP", true)
+		return if tp and tp:IsA("BasePart") then tp else nil
+	end
 	function N.hellBoss()
 		for _, model in ipairs(N.tagged("HellBoss")) do
 			if model.Parent then
@@ -37392,11 +37442,10 @@ do
 		elseif P.seen[zone] then
 			out = { { v = P.seen[zone], p = 1 } }
 		end
-				table.sort(out, function(a, b)
+		table.sort(out, function(a, b)
 			return a.v > b.v
 		end)
 		P.distCache[key] = out
-		P.distCacheSize = (P.distCacheSize or 0) + 1   -- 🔧 FIX #7
 		return out
 	end
 	-- Expected income added by one animal when the weakest placed one earns `worst` (0 while the plot has room).
@@ -37911,31 +37960,27 @@ do
 		return top * (1 + 0.01 * 1 + 0.0025 * 3) * (if lucky then (P.luckyFactor(zone)) else 1)
 	end
 	-- Value per second of breaking one egg: expected gain of its animal over the time it takes (egg choice by zone and luck).
-	    function P.eggRate(info, distance)
-        local state = P.lastState
-        if not state then
-            return -info.hits
-        end
-        local worst = if #state.placed < state.slots then 0 else (state.placed[#state.placed] or 0)
-        local dist = P.dist(info.zone, info.luck)
-        local g = P.gain(dist, worst) + P.mean(dist) * 1e-6
-        if info.lucky then
-            local factor = P.luckyFactor(info.zone)
-            local lucky = 0
-            for _, row in ipairs(dist) do
-                lucky += row.p * math.max(row.v * factor - worst, 0)
-            end
-            g = lucky + P.mean(dist) * factor * 1e-6
-        end
-                -- 🔧 FIX #4b: pool kosong (config belum load) → fallback non-negatif,
-        -- egg paling mudah (hits paling sedikit) menang, tetap diurutkan natural.
-        if g <= 0 and #dist == 0 then
-            g = 1 / math.max(info.hits, 1)
-        end
-        local walk = if state.teleport then 1e6 else math.max(N.modeSpeed(nil, false), 1)
-        local seconds = info.hits * state.pace + P.EggGap + (distance or 0) / walk
-        return math.min(g / math.max(seconds, 0.1), 1e14)
-    end
+	function P.eggRate(info, distance)
+		local state = P.lastState
+		if not state then
+			return -info.hits
+		end
+		local worst = if #state.placed < state.slots then 0 else (state.placed[#state.placed] or 0)
+		local dist = P.dist(info.zone, info.luck)
+		local g = P.gain(dist, worst) + P.mean(dist) * 1e-6
+		if info.lucky then
+			-- a bigger hatch: every row of the zone table times the lucky factor, priced against the weakest placed one
+			local factor = P.luckyFactor(info.zone)
+			local lucky = 0
+			for _, row in ipairs(dist) do
+				lucky += row.p * math.max(row.v * factor - worst, 0)
+			end
+			g = lucky + P.mean(dist) * factor * 1e-6
+		end
+		local walk = if state.teleport then 1e6 else math.max(N.modeSpeed(nil, false), 1)
+		local seconds = info.hits * state.pace + P.EggGap + (distance or 0) / walk
+		return math.min(g / math.max(seconds, 0.1), 1e14)
+	end
 	-- Why nothing is on the buy list: every upgrade maxed, or the best one that does not pay back inside the horizon.
 	-- Zone hysteresis: (zone to farm, note for the DECIDE line, egg part to leave). A switch needs +15 % value; an egg in
 	-- progress in the current zone is finished unless what the new zone adds during the rest of it beats its own animal.
@@ -38003,17 +38048,12 @@ do
 		end
 		return seconds .. "s"
 	end
-		function P.update(force)
+	function P.update(force)
 		if not force and os.clock() - P.at < 4 then
 			return
 		end
 		P.at = os.clock()
-		-- 🔧 FIX #7: hanya reset cache distribusi jika memang perlu (force / cache terlalu besar).
-		-- Reset penuh setiap 4 dtk membuat cache tidak berguna dan boros CPU.
-		if force or (P.distCacheSize or 0) > 64 then
-			P.distCache = {}
-			P.distCacheSize = 0
-		end
+		P.distCache = {}
 		P.observe()
 		local horizon = P.horizon()
 		local state = P.state()
@@ -41024,7 +41064,7 @@ do
 					return "Going to zone " .. index
 				end,
 			})
-						Library:AddCommand({
+			Library:AddCommand({
 				Name = "mode",
 				Aliases = { "move" },
 				Args = "<walk/fast/teleport>",
@@ -41036,15 +41076,7 @@ do
 					if not pick then
 						return "Mode is " .. N.moveMode() .. ". Use: mode walk, mode fast or mode teleport"
 					end
-					-- 🔧 FIX #6: cek nil sebelum SetValue (UI bisa gagal build)
-					local option = Options.MoveMode
-					if not option then
-						return "Movement menu is not loaded yet"
-					end
-					local ok = pcall(option.SetValue, option, pick)
-					if not ok then
-						return "Could not set the movement mode"
-					end
+					Options.MoveMode:SetValue(pick)
 					return "Mode set to " .. pick
 				end,
 			})
