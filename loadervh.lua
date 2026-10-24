@@ -21507,6 +21507,13 @@ if WindowInfo.Icon == "vhpetir" then
 })
 -- Klik logo VH untuk restore window utama
 vhHolder.MouseButton1Click:Connect(function()
+    -- 🔧 FIX: cegah spam-click / click saat tween masih jalan
+    if not Library.Window or not Library.Window.SetMinimized then
+        return
+    end
+    if Library.Window.IsMinimized and not Library.Window:IsMinimized() then
+        return -- sudah restore, abaikan
+    end
     task.defer(function()
         if Library.Window and Library.Window.SetMinimized then
             Library.Window:SetMinimized(false)
@@ -21754,13 +21761,26 @@ MiniFooter = New("TextLabel", {
             return Minimized
         end
     
-        function Window:SetMinimized(State: boolean)
-            State = State == true
-            if Minimized == State then
-                return
-            end
-    
-            Minimized = State
+   function Window:SetMinimized(State: boolean)
+    State = State == true
+    if Minimized == State then
+        return
+    end
+
+    -- 🔧 FIX: kalau tween sebelumnya masih jalan, selesaikan dulu
+    if MinimizeTween then
+        StopTween(MinimizeTween, true)
+        MinimizeTween = nil
+        -- paksa state konsisten
+        if Minimized then
+            MainFrame.Size = UDim2.fromOffset(MiniWidth, MiniHeight)
+            if MiniCard then MiniCard.Visible = true end
+        else
+            MainFrame.Size = MinimizeRestoreSize or WindowInfo.Size
+        end
+    end
+
+    Minimized = State
     
             if MinimizeTween then
                 StopTween(MinimizeTween, true)
@@ -21786,9 +21806,14 @@ MiniFooter = New("TextLabel", {
                 HideTabTooltipSafe()
     
                 if not MinimizeRestoreSize then
-                    MinimizeRestoreSize = RestoringTo or MainFrame.Size
-                end
-                RestoringTo = nil
+    local cur = MainFrame.Size
+    -- kalau size sekarang = mini size, pakai WindowInfo.Size sebagai fallback
+    if cur.X.Offset <= MiniWidth + 4 and cur.Y.Offset <= MiniHeight + 4 then
+        MinimizeRestoreSize = WindowInfo.Size
+    else
+        MinimizeRestoreSize = RestoringTo or cur
+    end
+end
     
                 if #MinimizeHidden == 0 then
                     for _, Gui in { TopBar, TopLine, DividerLine, Tabs, Container, BottomBackground, BottomBar, BottomLine } do
@@ -21826,49 +21851,61 @@ end)
                 end
             else
     MiniCard.Visible = false
-    -- pastikan semua elemen mini card tersembunyi saat restore
     if MiniSubtitle then MiniSubtitle.Visible = false end
     if MiniFooter then MiniFooter.Visible = false end
     if MiniBellBadge then MiniBellBadge.Visible = false end
     
-                local Target = MinimizeRestoreSize or WindowInfo.Size
-                RestoringTo = Target
-                MinimizeRestoreSize = nil
-    
-                local function Restore()
-                    if Minimized then
-                        return
-                    end
-                    RestoringTo = nil
-    
-                    for _, Gui in MinimizeHidden do
-                        Gui.Visible = true
-                    end
-                    table.clear(MinimizeHidden)
-    
-                    for _, Tab in Library.Tabs do
-                        if Tab.Resize then
-                            Tab:Resize(true)
-                        end
-                    end
-                end
-    
-                if Animate then
-                    local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
-                    MinimizeTween = Tween
-                    Tween:Play()
-    
-                    task.delay(Info.Time * 0.55, function()
-                        if MinimizeTween == Tween then
-                            Restore()
-                        end
-                    end)
-                else
-                    MainFrame.Size = Target
-                    Restore()
-                end
+    -- Reset mini card scale biar tidak ikut animasi lama
+    if Window.MiniScale then
+        Window.MiniScale.Scale = 1
+    end
+
+    local Target = MinimizeRestoreSize or WindowInfo.Size
+    RestoringTo = Target
+    MinimizeRestoreSize = nil
+
+    local function Restore()
+        if Minimized then return end
+        RestoringTo = nil
+
+        -- 🔧 FIX: resize MainFrame dulu, baru tampilkan children
+        MainFrame.Size = Target
+
+        for _, Gui in MinimizeHidden do
+            Gui.Visible = true
+        end
+        table.clear(MinimizeHidden)
+
+        -- 🔧 FIX: paksa refresh layout setelah visible
+        if Tabs then
+            Tabs.Size = UDim2.new(0, Window:GetSidebarWidth(), 1, -70)
+        end
+        if Container then
+            Container.Size = UDim2.new(1, -Window:GetSidebarWidth() - 1, 1, -70)
+        end
+
+        for _, Tab in Library.Tabs do
+            if Tab.Resize then
+                Tab:Resize(true)
             end
         end
+    end
+
+    if Animate then
+        local Tween = TweenService:Create(MainFrame, Info, { Size = Target })
+        MinimizeTween = Tween
+        Tween:Play()
+
+        -- 🔧 FIX: tunggu tween SIZE selesai dulu, baru Restore
+        task.delay(Info.Time, function()
+            if MinimizeTween == Tween then
+                Restore()
+            end
+        end)
+    else
+        Restore()
+    end
+end
     
         function Window:ToggleMinimized()
             Window:SetMinimized(not Minimized)
